@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="AVGL turns agent repositories into a human-readable system story with evidence.">
+  <title>AVGL — Understand the agent, not the graph</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="AVGL home">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <span>AVGL</span>
+    </a>
+    <div class="header-meta">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>v0.1 · evidence-bound</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="eyebrow">Agent Visual Grammar Language</p>
+      <h1 id="hero-title">Understand the agent.<br><span>Not the graph.</span></h1>
+      <p class="hero-copy">Paste a public GitHub repository. AVGL scans bounded code and configuration surfaces, maps what it can actually evidence, and explains the system as a readable story.</p>
+
+      <form id="analyze-form" class="repo-form">
+        <label for="repository">GitHub repository</label>
+        <div class="input-row">
+          <input id="repository" name="repository" type="text" inputmode="url" autocomplete="off" placeholder="github.com/owner/repository" aria-describedby="repo-help" required>
+          <button id="analyze-button" class="primary-button" type="submit">Analyze</button>
+        </div>
+        <div class="form-foot">
+          <p id="repo-help">v0.1 supports public GitHub repositories. Private repository auth comes next.</p>
+          <button id="demo-button" class="text-button" type="button">Load example</button>
+        </div>
+      </form>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div id="error" class="error" role="alert" hidden></div>
+    </section>
+
+    <section id="result" class="result" hidden aria-live="polite">
+      <div class="result-head">
+        <div>
+          <p class="eyebrow">Analysis</p>
+          <h2 id="result-title">Repository</h2>
+        </div>
+        <div id="scan-meta" class="scan-meta"></div>
+      </div>
+
+      <div id="partial-warning" class="notice" hidden>
+        This is a bounded partial scan. Evidence outside the scan window remains unknown.
+      </div>
+
+      <nav class="view-tabs" aria-label="Analysis views">
+        <button type="button" class="view-tab active" data-view="story" aria-selected="true">Story</button>
+        <button type="button" class="view-tab" data-view="inspect" aria-selected="false">Inspect</button>
+        <button type="button" class="view-tab" data-view="system" aria-selected="false">System</button>
+      </nav>
+
+      <div id="story-view" class="view-panel"></div>
+      <div id="inspect-view" class="view-panel" hidden></div>
+      <div id="system-view" class="view-panel" hidden></div>
+    </section>
+
+    <section class="principle-strip" aria-label="AVGL principles">
+      <div><strong>CAN ≠ MAY</strong><span>Technical reach is not permission.</span></div>
+      <div><strong>ACT ≠ DID</strong><span>An attempt is not a verified outcome.</span></div>
+      <div><strong>UNKNOWN stays UNKNOWN</strong><span>Missing evidence is never filled with a guess.</span></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>AVGL v0.1</span>
+    <span>DISCOVER → CLASSIFY → BIND → PROJECT</span>
+  </footer>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
