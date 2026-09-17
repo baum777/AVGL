@@ -1,10 +1,17 @@
 import { MAX_FILE_BYTES } from './constants.js';
-import { discoverFiles, isSensitivePath, isTextCandidate } from './discover.js';
+import { discoverFiles, isSensitivePath, isTextCandidate, sourceKindForPath } from './discover.js';
 import { classifyDiscoveries } from './classify.js';
 import { bindAvglIr } from './bind.js';
 
 const DEFAULT_MAX_FILES = 120;
 const DEFAULT_CONCURRENCY = 6;
+const SOURCE_QUOTA = Object.freeze({
+  implementation: 0.65,
+  config: 0.15,
+  test: 0.1,
+  documentation: 0.1
+});
+const SOURCE_ORDER = ['implementation', 'config', 'test', 'documentation', 'other'];
 
 function validPart(value) {
   return /^[A-Za-z0-9_.-]+$/.test(value) && value !== '.' && value !== '..';
@@ -81,6 +88,41 @@ async function expectJson(fetchImpl, url, token) {
   return response.json();
 }
 
+export function selectGitHubCandidates(eligible, maxFiles) {
+  if (eligible.length <= maxFiles) return [...eligible];
+
+  const buckets = new Map(SOURCE_ORDER.map((kind) => [kind, []]));
+  for (const file of eligible) {
+    const kind = file.sourceKind ?? sourceKindForPath(file.path);
+    (buckets.get(kind) ?? buckets.get('other')).push({ ...file, sourceKind: kind });
+  }
+  for (const bucket of buckets.values()) bucket.sort((a, b) => a.path.localeCompare(b.path));
+
+  const selected = [];
+  const selectedPaths = new Set();
+  for (const kind of ['implementation', 'config', 'test', 'documentation']) {
+    const quota = Math.floor(maxFiles * SOURCE_QUOTA[kind]);
+    for (const file of buckets.get(kind).slice(0, quota)) {
+      selected.push(file);
+      selectedPaths.add(file.path);
+    }
+  }
+
+  const remainder = eligible
+    .map((file) => ({ ...file, sourceKind: file.sourceKind ?? sourceKindForPath(file.path) }))
+    .filter((file) => !selectedPaths.has(file.path))
+    .sort((a, b) => {
+      const kindOrder = SOURCE_ORDER.indexOf(a.sourceKind) - SOURCE_ORDER.indexOf(b.sourceKind);
+      return kindOrder || a.path.localeCompare(b.path);
+    });
+
+  for (const file of remainder) {
+    if (selected.length >= maxFiles) break;
+    selected.push(file);
+  }
+  return selected;
+}
+
 export async function discoverGitHubRepository(input, options = {}) {
   const parsed = parseGitHubRepository(input);
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
@@ -101,14 +143,14 @@ export async function discoverGitHubRepository(input, options = {}) {
 
   const blobs = (tree.tree ?? [])
     .filter((entry) => entry.type === 'blob' && typeof entry.path === 'string')
-    .map((entry) => ({ path: entry.path, size: entry.size ?? 0 }));
+    .map((entry) => ({ path: entry.path, size: entry.size ?? 0, sourceKind: sourceKindForPath(entry.path) }));
 
-  const candidates = blobs
+  const eligible = blobs
     .filter((file) => !isSensitivePath(file.path))
     .filter((file) => isTextCandidate(file.path))
-    .filter((file) => file.size <= maxFileBytes)
-    .slice(0, maxFiles);
+    .filter((file) => file.size <= maxFileBytes);
 
+  const candidates = selectGitHubCandidates(eligible, maxFiles);
   const contents = await mapConcurrent(candidates, concurrency, async (file) => {
     const path = file.path.split('/').map(encodeURIComponent).join('/');
     const rawUrl = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${encodeURIComponent(ref)}/${path}`;
@@ -119,9 +161,7 @@ export async function discoverGitHubRepository(input, options = {}) {
 
   const byPath = new Map(contents.filter(Boolean).map((file) => [file.path, file]));
   const files = blobs.map((file) => byPath.get(file.path) ?? file);
-  const partial = candidates.length >= maxFiles && blobs.filter((file) =>
-    !isSensitivePath(file.path) && isTextCandidate(file.path) && file.size <= maxFileBytes
-  ).length > maxFiles;
+  const partial = eligible.length > maxFiles;
 
   return discoverFiles(files, {
     kind: 'repository',
@@ -129,6 +169,8 @@ export async function discoverGitHubRepository(input, options = {}) {
   }, {
     maxFileBytes,
     filesSeen: blobs.length,
+    filesEligible: eligible.length,
+    scanComplete: !partial,
     analysisMode: partial ? 'github-static-baseline-partial' : 'github-static-baseline'
   });
 }

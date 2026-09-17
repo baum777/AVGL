@@ -8,6 +8,12 @@ import {
 } from './constants.js';
 import { DETECTORS } from './detectors.js';
 
+const CODE_EXTENSIONS = new Set([
+  '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.py', '.go', '.rs', '.java',
+  '.kt', '.rb', '.php'
+]);
+const CONFIG_EXTENSIONS = new Set(['.json', '.yaml', '.yml', '.toml', '.ini']);
+
 export function isSensitivePath(path) {
   const name = basename(path).toLowerCase();
   return name === '.env' ||
@@ -24,11 +30,41 @@ export function isTextCandidate(path) {
   return TEXT_FILENAMES.has(name) || TEXT_EXTENSIONS.has(extname(name).toLowerCase());
 }
 
+export function sourceKindForPath(path) {
+  const normalized = String(path ?? '').replaceAll('\\', '/');
+  const lower = normalized.toLowerCase();
+  const name = basename(lower);
+  const extension = extname(name);
+
+  if (
+    lower.startsWith('docs/') ||
+    lower.includes('/docs/') ||
+    lower.startsWith('.agents/') ||
+    lower.includes('/.agents/') ||
+    extension === '.md' ||
+    extension === '.txt' ||
+    name === 'readme.md'
+  ) return 'documentation';
+
+  if (
+    /(^|\/)(test|tests|__tests__|spec|specs)(\/|$)/.test(lower) ||
+    /\.(test|spec)\.[^.]+$/.test(lower)
+  ) return 'test';
+
+  if (
+    CONFIG_EXTENSIONS.has(extension) ||
+    ['dockerfile', 'makefile', 'procfile'].includes(name)
+  ) return 'config';
+
+  if (CODE_EXTENSIONS.has(extension)) return 'implementation';
+  return 'other';
+}
+
 function snippet(line) {
   return line.trim().replace(/\s+/g, ' ').slice(0, 180);
 }
 
-function scanContent(path, content, observations) {
+function scanContent(path, content, observations, sourceKind) {
   const lines = content.split(/\r?\n/);
   for (const detector of DETECTORS) {
     let hits = 0;
@@ -42,7 +78,8 @@ function scanContent(path, content, observations) {
         line: index + 1,
         snippet: snippet(lines[index]),
         confidence: detector.confidence,
-        evidenceState: detector.evidenceState
+        evidenceState: detector.evidenceState,
+        sourceKind
       });
       hits += 1;
     }
@@ -54,6 +91,13 @@ export function discoverFiles(files, source = { kind: 'repository', label: 'repo
   const observations = [];
   const skippedSensitive = [];
   const skippedOversize = [];
+  const sourceCoverage = {
+    implementation: 0,
+    config: 0,
+    test: 0,
+    documentation: 0,
+    other: 0
+  };
   let filesScanned = 0;
 
   for (const file of files) {
@@ -79,15 +123,23 @@ export function discoverFiles(files, source = { kind: 'repository', label: 'repo
     }
     if (content === null) continue;
 
+    const sourceKind = file.sourceKind ?? sourceKindForPath(path);
     filesScanned += 1;
-    scanContent(path, content, observations);
+    sourceCoverage[sourceKind] = (sourceCoverage[sourceKind] ?? 0) + 1;
+    scanContent(path, content, observations, sourceKind);
   }
 
   return {
     source,
     generatedAt: new Date().toISOString(),
     filesSeen: options.filesSeen ?? files.length,
+    filesEligible: options.filesEligible ?? files.filter((file) => {
+      const path = String(file?.path ?? '').replaceAll('\\', '/');
+      return path && !isSensitivePath(path) && isTextCandidate(path) && (file.size ?? 0) <= maxFileBytes;
+    }).length,
     filesScanned,
+    scanComplete: options.scanComplete ?? true,
+    sourceCoverage,
     skippedSensitive,
     skippedOversize,
     analysisMode: options.analysisMode,
@@ -135,12 +187,15 @@ export async function discoverRepository(rootPath = '.', options = {}) {
     }
   }
 
+  const eligible = files.filter((file) => !isSensitivePath(file.path) && isTextCandidate(file.path) && (file.size ?? 0) <= maxFileBytes);
   return discoverFiles(files, {
     kind: 'repository',
     label: basename(root)
   }, {
     maxFileBytes,
     filesSeen: paths.length,
+    filesEligible: eligible.length,
+    scanComplete: true,
     analysisMode: 'deterministic-static-baseline'
   });
 }
