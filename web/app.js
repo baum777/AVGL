@@ -26,9 +26,15 @@ function create(tag, className, text) {
   return node;
 }
 function byClass(ir, semanticClass) { return ir.nodes.find((node) => node.semanticClass === semanticClass) ?? null; }
-function answer(ir, semanticClass) { return byClass(ir, semanticClass)?.label ?? 'Not evidenced'; }
-function metaChip(text) { return create('span', 'meta-chip', text); }
 function evidenceKinds(node) { return [...new Set((node?.evidence ?? []).map((item) => item.sourceKind).filter(Boolean))]; }
+function areaFor(ir, semanticClass) {
+  const area = ir.synthesis?.areas?.[semanticClass];
+  if (area) return area;
+  const node = byClass(ir, semanticClass);
+  return { semanticClass, status: node ? 'EVIDENCED' : 'UNKNOWN', summary: node?.label ?? 'Not evidenced', families: [], evidenceKinds: evidenceKinds(node) };
+}
+function answer(ir, semanticClass) { return areaFor(ir, semanticClass).summary; }
+function metaChip(text) { return create('span', 'meta-chip', text); }
 function evidenceHint(node) {
   const kinds = evidenceKinds(node);
   if (!node) return 'No bounded evidence strong enough for this semantic area.';
@@ -48,14 +54,22 @@ function exampleIr() {
     relations: [], unknowns: ['MAY'], invariants: ['HARNESS != AUTHORITY', 'CONTEXT != PERMISSION', 'CAN != MAY', 'PROPOSAL != EXECUTION', 'ACT != DID', 'RECEIPT != VERIFICATION']
   };
 }
+function familyList(area) {
+  if (!area?.families?.length) return null;
+  const row = create('div', 'scan-meta');
+  for (const family of area.families) row.append(create('span', 'source-kind', family.label));
+  return row;
+}
 function storyStep(index, ir, semanticClass) {
   const node = byClass(ir, semanticClass);
+  const area = areaFor(ir, semanticClass);
   const wrapper = create('div', `story-step${node ? '' : ' unknown'}`);
   wrapper.append(create('div', 'story-number', String(index)));
   const body = create('div');
   const question = create('div', 'story-question');
   question.append(create('span', 'token', semanticClass), document.createTextNode(` · ${QUESTIONS[semanticClass]}`));
-  body.append(question, create('p', 'story-answer', node ? node.label : 'Not evidenced'), create('p', 'story-explain', evidenceHint(node)));
+  body.append(question, create('p', 'story-answer', area.summary), create('p', 'story-explain', evidenceHint(node)));
+  const families = familyList(area); if (families) body.append(families);
   wrapper.append(body);
   return wrapper;
 }
@@ -65,10 +79,13 @@ function renderStory(ir) {
   stack.append(storyStep(1, ir, 'WHO'), storyStep(2, ir, 'KNOW'), storyStep(3, ir, 'THINK'));
   const pair = create('div', 'capability-pair');
   const can = byClass(ir, 'CAN'); const may = byClass(ir, 'MAY');
+  const canArea = areaFor(ir, 'CAN'); const mayArea = areaFor(ir, 'MAY');
   const canCard = create('div', 'pair-card');
-  canCard.append(create('span', 'token', 'CAN'), create('h3', '', can ? can.label : 'Not evidenced'), create('p', '', evidenceHint(can)));
+  canCard.append(create('span', 'token', 'CAN'), create('h3', '', canArea.summary), create('p', '', evidenceHint(can)));
+  const canFamilies = familyList(canArea); if (canFamilies) canCard.append(canFamilies);
   const mayCard = create('div', `pair-card${may ? '' : ' authority-missing'}`);
-  mayCard.append(create('span', 'token', 'MAY'), create('h3', '', may ? may.label : 'Not evidenced'), create('p', '', evidenceHint(may)));
+  mayCard.append(create('span', 'token', 'MAY'), create('h3', '', mayArea.summary), create('p', '', evidenceHint(may)));
+  const mayFamilies = familyList(mayArea); if (mayFamilies) mayCard.append(mayFamilies);
   pair.append(canCard, mayCard);
   if (can && !may) pair.append(create('p', 'invariant-note', 'Technical capability signals were found, but no implementation/config authority evidence passed the MAY gate.'));
   stack.append(pair, storyStep(4, ir, 'ACT'), storyStep(5, ir, 'DID'));
@@ -122,10 +139,11 @@ function renderSystem(ir) {
 function render(ir) {
   resultTitle.textContent = ir.source?.label || 'Repository';
   const eligible = ir.analysis.filesEligible ?? ir.analysis.filesSeen;
-  const signalCount = ir.nodes.length;
+  const coverage = ir.analysis.sourceCoverage ?? {};
+  const sourceMix = `impl ${coverage.implementation ?? 0} · cfg ${coverage.config ?? 0} · test ${coverage.test ?? 0} · docs ${coverage.documentation ?? 0}`;
   scanMeta.replaceChildren(
     metaChip(`${ir.analysis.filesScanned}/${eligible} analyzable files sampled`),
-    metaChip(`${signalCount}/7 semantic areas have signals`),
+    metaChip(sourceMix),
     metaChip(ir.analysis.scanComplete ? 'complete bounded scan' : 'partial bounded scan')
   );
   partialWarning.hidden = Boolean(ir.analysis.scanComplete);
@@ -139,7 +157,7 @@ function showError(message) { errorNode.textContent = message; errorNode.hidden 
 function clearError() { errorNode.hidden = true; errorNode.textContent = ''; }
 form.addEventListener('submit', async (event) => {
   event.preventDefault(); clearError(); const repository = repositoryInput.value.trim(); if (!repository) return;
-  setBusy(true, 'Sampling repository surfaces and binding evidence by source quality…');
+  setBusy(true, 'Discovering, binding and synthesizing repository evidence…');
   try {
     const response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repository }) });
     const payload = await response.json().catch(() => ({}));
