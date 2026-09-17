@@ -47,11 +47,15 @@ export function bindAvglIr(discovery, classificationResult) {
     source: discovery.source,
     analysis: {
       pipeline: ['DISCOVER', 'CLASSIFY', 'BIND', 'PROJECT'],
-      mode: 'deterministic-static-baseline',
+      mode: discovery.analysisMode ?? 'deterministic-static-baseline',
       filesSeen: discovery.filesSeen,
+      filesEligible: discovery.filesEligible,
       filesScanned: discovery.filesScanned,
+      scanComplete: discovery.scanComplete,
+      sourceCoverage: discovery.sourceCoverage,
       skippedSensitive: discovery.skippedSensitive,
-      skippedOversize: discovery.skippedOversize
+      skippedOversize: discovery.skippedOversize,
+      rejectedWeakEvidence: classificationResult.rejectedWeakEvidence.length
     },
     nodes,
     relations: [],

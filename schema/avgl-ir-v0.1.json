@@ -18,7 +18,7 @@
     },
     "analysis": {
       "type": "object",
-      "required": ["pipeline", "mode", "filesSeen", "filesScanned", "skippedSensitive", "skippedOversize"],
+      "required": ["pipeline", "mode", "filesSeen", "filesEligible", "filesScanned", "scanComplete", "sourceCoverage", "skippedSensitive", "skippedOversize", "rejectedWeakEvidence"],
       "properties": {
         "pipeline": {
           "type": "array",
@@ -33,9 +33,24 @@
         },
         "mode": { "type": "string" },
         "filesSeen": { "type": "integer", "minimum": 0 },
+        "filesEligible": { "type": "integer", "minimum": 0 },
         "filesScanned": { "type": "integer", "minimum": 0 },
+        "scanComplete": { "type": "boolean" },
+        "sourceCoverage": {
+          "type": "object",
+          "required": ["implementation", "config", "test", "documentation", "other"],
+          "properties": {
+            "implementation": { "type": "integer", "minimum": 0 },
+            "config": { "type": "integer", "minimum": 0 },
+            "test": { "type": "integer", "minimum": 0 },
+            "documentation": { "type": "integer", "minimum": 0 },
+            "other": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
         "skippedSensitive": { "type": "array", "items": { "type": "string" } },
-        "skippedOversize": { "type": "array", "items": { "type": "string" } }
+        "skippedOversize": { "type": "array", "items": { "type": "string" } },
+        "rejectedWeakEvidence": { "type": "integer", "minimum": 0 }
       },
       "additionalProperties": false
     },
@@ -55,12 +70,13 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["path", "line", "snippet", "detector"],
+              "required": ["path", "line", "snippet", "detector", "sourceKind"],
               "properties": {
                 "path": { "type": "string" },
                 "line": { "type": "integer", "minimum": 1 },
                 "snippet": { "type": "string" },
-                "detector": { "type": "string" }
+                "detector": { "type": "string" },
+                "sourceKind": { "enum": ["implementation", "config", "test", "documentation", "other"] }
               },
               "additionalProperties": false
             }
