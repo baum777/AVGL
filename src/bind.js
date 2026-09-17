@@ -47,7 +47,7 @@ export function bindAvglIr(discovery, classificationResult) {
     source: discovery.source,
     analysis: {
       pipeline: ['DISCOVER', 'CLASSIFY', 'BIND', 'PROJECT'],
-      mode: 'deterministic-static-baseline',
+      mode: discovery.analysisMode ?? 'deterministic-static-baseline',
       filesSeen: discovery.filesSeen,
       filesScanned: discovery.filesScanned,
       skippedSensitive: discovery.skippedSensitive,
