@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avgl.dev/schema/avgl-ir-v0.1.json",
+  "title": "AVGL Intermediate Representation v0.1",
+  "type": "object",
+  "required": ["avglVersion", "generatedAt", "source", "analysis", "nodes", "relations", "unknowns", "invariants"],
+  "properties": {
+    "avglVersion": { "const": "0.1" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "required": ["kind", "label"],
+      "properties": {
+        "kind": { "const": "repository" },
+        "label": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "analysis": {
+      "type": "object",
+      "required": ["pipeline", "mode", "filesSeen", "filesScanned", "skippedSensitive", "skippedOversize"],
+      "properties": {
+        "pipeline": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "DISCOVER" },
+            { "const": "CLASSIFY" },
+            { "const": "BIND" },
+            { "const": "PROJECT" }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "mode": { "type": "string" },
+        "filesSeen": { "type": "integer", "minimum": 0 },
+        "filesScanned": { "type": "integer", "minimum": 0 },
+        "skippedSensitive": { "type": "array", "items": { "type": "string" } },
+        "skippedOversize": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "semanticClass", "label", "statement", "evidenceState", "confidence", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "semanticClass": { "enum": ["WHO", "KNOW", "THINK", "CAN", "MAY", "ACT", "DID"] },
+          "label": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "evidenceState": { "enum": ["EXPLICIT", "INFERRED", "OBSERVED", "UNKNOWN"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "line", "snippet", "detector"],
+              "properties": {
+                "path": { "type": "string" },
+                "line": { "type": "integer", "minimum": 1 },
+                "snippet": { "type": "string" },
+                "detector": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "relations": { "type": "array" },
+    "unknowns": {
+      "type": "array",
+      "items": { "enum": ["WHO", "KNOW", "THINK", "CAN", "MAY", "ACT", "DID"] },
+      "uniqueItems": true
+    },
+    "invariants": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}
