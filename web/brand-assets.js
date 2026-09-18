@@ -1,19 +1,22 @@
 const ASSET_ROOT = "AVGL_FULL_ASSET_PACKAGE/";
-const API = "/api/asset-extract";
+const STATIC_ROOT = "/assets/brand/";
+
+function normalizeAssetPath(path) {
+  return String(path || "").replace(ASSET_ROOT, "").replace(/^\/+/, "");
+}
 
 function assetUrl(path) {
-  const full = path.startsWith(ASSET_ROOT) ? path : ASSET_ROOT + path;
-  return API + "?raw=1&path=" + encodeURIComponent(full);
+  return STATIC_ROOT + normalizeAssetPath(path).split("/").map(encodeURIComponent).join("/");
 }
 
 function humanFolder(path) {
-  const parts = path.replace(ASSET_ROOT, "").split("/");
+  const parts = normalizeAssetPath(path).split("/");
   if (parts.length < 2) return "Package";
   return parts.slice(0, -1).join(" / ").replace(/^\d+_/, "").replaceAll("_", " ");
 }
 
 function ext(path) {
-  const m = path.toLowerCase().match(/\.([a-z0-9]+)$/);
+  const m = String(path).toLowerCase().match(/\.([a-z0-9]+)$/);
   return m ? m[1] : "";
 }
 
@@ -27,7 +30,7 @@ function previewFor(file) {
   card.rel = "noopener";
   card.title = file.name;
 
-  if (["svg", "png"].includes(extension)) {
+  if (["svg", "png", "ico"].includes(extension)) {
     const img = document.createElement("img");
     img.src = href;
     img.loading = "lazy";
@@ -53,20 +56,25 @@ async function initAssetLibrary() {
   if (!host || !count) return;
 
   try {
-    const response = await fetch(API + "?list=1", { headers: { Accept: "application/json" } });
+    const response = await fetch(STATIC_ROOT + "manifest.json", { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error("Asset manifest unavailable");
-    const payload = await response.json();
-    count.textContent = String(payload.count || 0);
+    const manifest = await response.json();
+    const files = [
+      ...(manifest.files || []).map(file => ({ ...file, name: ASSET_ROOT + file.path })),
+      { name: ASSET_ROOT + "manifest.json" },
+      { name: ASSET_ROOT + "manifest.txt" }
+    ];
+    count.textContent = String(files.length);
 
     const groups = new Map();
-    for (const file of payload.files || []) {
+    for (const file of files) {
       const key = humanFolder(file.name);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(file);
     }
 
     const fragment = document.createDocumentFragment();
-    for (const [label, files] of groups) {
+    for (const [label, groupedFiles] of groups) {
       const group = document.createElement("section");
       group.className = "brand-asset-group";
 
@@ -75,12 +83,12 @@ async function initAssetLibrary() {
       const title = document.createElement("h3");
       title.textContent = label;
       const meta = document.createElement("span");
-      meta.textContent = files.length + " assets";
+      meta.textContent = groupedFiles.length + " assets";
       head.append(title, meta);
 
       const grid = document.createElement("div");
       grid.className = "brand-asset-grid";
-      files.forEach(file => grid.append(previewFor(file)));
+      groupedFiles.forEach(file => grid.append(previewFor(file)));
       group.append(head, grid);
       fragment.append(group);
     }
