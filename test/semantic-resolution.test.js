@@ -426,7 +426,7 @@ test('MAY accepts authority revocation without implying ACT or DID', () => {
   }]);
   const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
   assert.ok(may);
-  assert.equal(may.semanticResolution.rule, 'authority-grant-lifecycle');
+  assert.equal(may.semanticResolution.rule, 'authority-revocation');
   assert.equal(discovery.observations.some((item) => item.candidateClass === 'ACT'), false);
   assert.equal(discovery.observations.some((item) => item.candidateClass === 'DID'), false);
 });
