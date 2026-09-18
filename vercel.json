@@ -39,15 +39,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/web/index.html"
-    },
-    {
-      "source": "/styles.css",
-      "destination": "/web/styles.css"
-    },
-    {
-      "source": "/app.js",
-      "destination": "/web/app-entry.js"
+      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -68,5 +60,7 @@
         }
       ]
     }
-  ]
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "web"
 }
