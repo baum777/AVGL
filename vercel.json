@@ -48,6 +48,10 @@
     {
       "source": "/app.js",
       "destination": "/web/app.js"
+    },
+    {
+      "source": "/brand-assets.js",
+      "destination": "/web/brand-assets.js"
     }
   ],
   "headers": [
