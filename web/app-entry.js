@@ -138,7 +138,7 @@ ensureGrantedRepoHint();
 `;
 }
 
-const source = await fetch("/web/app.js", { cache: "no-store" }).then((r) => {
+const source = await fetch("/app.js", { cache: "no-store" }).then((r) => {
   if (!r.ok) throw new Error("Could not load AVGL web app.");
   return r.text();
 });
