@@ -66,6 +66,21 @@ export default async function handler(req, res) {
       });
     }
 
+    if (typeof req.query?.start === "string") {
+      const start = Math.max(0, Number.parseInt(req.query.start, 10) || 0);
+      const count = Math.min(8, Math.max(1, Number.parseInt(String(req.query.count || "8"), 10) || 8));
+      const selected = entries.slice(start, start + count);
+      return res.status(200).json({
+        start,
+        count: selected.length,
+        total: entries.length,
+        files: selected.map((entry) => {
+          const out = extractEntry(zip, entry);
+          return { path: entry.name, size: out.length, contentBase64: out.toString("base64") };
+        })
+      });
+    }
+
     const requested = typeof req.query?.path === "string" ? req.query.path : "";
     if (!requested) return res.status(400).json({ error: "path_required" });
     if (requested.includes("..") || requested.startsWith("/")) {
