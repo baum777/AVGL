@@ -23,7 +23,7 @@ if (process.argv.includes("--list")) {
   process.exit(0);
 }
 
-for (const entry of entries) {
+fs.rmSync(targetRoot, { recursive: true, force: true });\nfs.mkdirSync(targetRoot, { recursive: true });\n\nfor (const entry of entries) {
   const relative = entry.name.slice(SOURCE_PREFIX.length);
   const outputPath = path.join(targetRoot, relative);
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
