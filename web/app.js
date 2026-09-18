@@ -69,7 +69,7 @@ function renderEffective(){
 }
 
 function renderMeta(){const a=state.ir.analysis||{},c=a.sourceCoverage||{},eligible=a.filesEligible??a.filesSeen;const h=$("#scan-meta"),mode=a.scanStrategy==="full"?t("fullScan"):t("quickScan");h.replaceChildren(chip(mode),chip((a.filesScanned||0)+"/"+eligible+" "+t("sampled")),chip("impl "+(c.implementation||0)+" · cfg "+(c.config||0)+" · test "+(c.test||0)+" · docs "+(c.documentation||0)),chip(a.scanComplete?t("complete"):t("partial")));const n=$("#partial-warning");n.hidden=!!a.scanComplete;if(!n.hidden){const failures=a.contentFetchFailures?.length||0;n.textContent=state.locale==="de"?`Scan unvollständig: ${a.filesScanned||0} von ${eligible} geeigneten Files gelesen${failures?`; ${failures} Fetch-Fehler`:""}. Nicht gelesene Evidence bleibt unbekannt.`:`Scan incomplete: ${a.filesScanned||0} of ${eligible} eligible files read${failures?`; ${failures} fetch failures`:""}. Unseen evidence remains unknown.`}}
-function renderAll(scroll=true){$("#result-title").textContent=state.ir?.source?.label||state.repo;renderMeta();renderStory();renderInspect();renderSystem();renderInheritance();renderPropagation();renderEffective();refreshLensCapabilities();document.body.classList.add("workspace-active");$("#system-nav-scope").textContent=state.repo||"repository";$("#result").hidden=false;selectView(state.lens||"structure");if(scroll)$("#result").scrollIntoView({behavior:"smooth",block:"start"})}
+function renderAll(scroll=true){$("#result-title").textContent=state.ir?.source?.label||state.repo;renderMeta();renderStory();renderInspect();renderSystem();renderInheritance();renderPropagation();renderEffective();refreshLensCapabilities();document.body.classList.add("workspace-active");dockAssistant();$("#system-nav-scope").textContent=state.repo||"repository";$("#result").hidden=false;selectView(state.lens||"structure");if(scroll)$("#result").scrollIntoView({behavior:"smooth",block:"start"})}
 function lensCapabilities(){
  const relations=state.ir?.relations||[],effects=state.ir?.effects||[],chains=state.ir?.effectChains||[],effective=state.ir?.effectiveStates||[];
  return {
@@ -92,7 +92,7 @@ function selectView(v){
  const keys={overview:"lensOverview",structure:"lensStructure",evidence:"lensEvidence",agentic:"lensAgentic",inheritance:"lensInheritance",propagation:"lensPropagation",effective:"lensEffective"};
  $("#lens-description").textContent=t(keys[state.lens]);
  const selection=state.activeFile?" → "+state.activeFile.split("/").join(" → "):"";
- $("#navigation-trail").textContent="Navigation: "+(state.repo||"repository")+selection+" · Lens: "+state.lens
+ $("#navigation-trail").textContent="Navigation: "+(state.repo||"repository")+selection+" · Lens: "+state.lens;updateAssistantContext()
 }
 document.querySelectorAll(".view-tab").forEach(b=>b.onclick=()=>selectView(b.dataset.view));
 
@@ -139,11 +139,31 @@ function renderFileRelations(path){
 async function analyzeCurrentRepository(repo){if(!repo)return;state.repo=repo;state.ir=null;state.inventory=null;state.activeFile=null;state.chat=[];$("#error").hidden=true;$("#status").textContent=t("loading");$("#analyze-button").disabled=true;$("#analyze-private-button").disabled=true;try{const [r]=await Promise.all([fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository:repo,scanStrategy:state.scanStrategy,accessMode:state.accessMode})}),loadInventory(repo)]);const p=await r.json();if(!r.ok)throw Error(p.error||"Analysis failed");state.ir=p.ir;renderAll();$("#status").textContent=t("done");renderSuggestions();updateAssistantContext()}catch(err){$("#error").textContent=err.message;$("#error").hidden=false;$("#status").textContent=""}finally{$("#analyze-button").disabled=false;$("#analyze-private-button").disabled=false}}
 $("#analyze-form").onsubmit=async e=>{e.preventDefault();if(state.accessMode!=="public")return;await analyzeCurrentRepository($("#repository").value.trim())};
 $("#analyze-private-button").onclick=async()=>{const repo=$("#private-repository").value;if(repo)await analyzeCurrentRepository(repo)};
-$("#assistant-fab").onclick=()=>{$("#assistant-panel").hidden=!$("#assistant-panel").hidden;if(!$("#assistant-panel").hidden)$("#assistant-input").focus()};$("#assistant-close").onclick=()=>$("#assistant-panel").hidden=true;
-function updateAssistantContext(){const n=$("#assistant-context");if(!state.repo){n.textContent=t("noRepo");$("#assistant-send").disabled=true}else if(state.accessMode==="github_app"){n.textContent=t("privateChatBlocked");$("#assistant-send").disabled=true}else{n.textContent=state.repo+(state.activeFile?" · "+(state.locale==="de"?"Aktives File":"Active file")+": "+state.activeFile:"");$("#assistant-send").disabled=false}}
+function dockAssistant(){
+ const panel=$("#assistant-panel"),sidebar=$("#context-sidebar");
+ if(!panel||!sidebar||!document.body.classList.contains("workspace-active"))return;
+ if(panel.parentElement!==sidebar)sidebar.append(panel)
+}
+function setAssistantOpen(open){
+ const panel=$("#assistant-panel"),sidebar=$("#context-sidebar");
+ panel.hidden=!open;
+ if(sidebar)sidebar.classList.toggle("assistant-open",open&&panel.parentElement===sidebar);
+ if(open){updateAssistantContext();$("#assistant-input").focus()}
+}
+$("#assistant-fab").onclick=()=>{dockAssistant();setAssistantOpen($("#assistant-panel").hidden)};
+$("#assistant-context-toggle").onclick=()=>{dockAssistant();setAssistantOpen($("#assistant-panel").hidden)};
+$("#assistant-close").onclick=()=>setAssistantOpen(false);
+function updateAssistantContext(){
+ const n=$("#assistant-context");
+ if(!state.repo){n.textContent=t("noRepo");$("#assistant-send").disabled=true;return}
+ const selection=state.activeFile||(state.locale==="de"?"keine Auswahl":"no selection");
+ const prefix=(state.locale==="de"?"Scope: ":"Scope: ")+state.repo+" · Lens: "+(state.lens||"structure")+" · "+(state.locale==="de"?"Auswahl: ":"Selection: ")+selection;
+ if(state.accessMode==="github_app"){n.textContent=prefix+" · "+t("privateChatBlocked");$("#assistant-send").disabled=true}
+ else{n.textContent=prefix;$("#assistant-send").disabled=false}
+}
 function renderSuggestions(){const h=$("#assistant-suggestions");h.replaceChildren();["suggest1","suggest2","suggest3"].forEach(k=>{const b=el("button","assistant-suggestion",t(k));b.type="button";b.onclick=()=>{$("#assistant-input").value=t(k);$("#assistant-input").focus()};h.append(b)})}
 function bubble(role,text,meta=""){const m=el("div","chat-message "+role);m.append(el("div","chat-bubble",text));if(meta)m.append(el("div","chat-meta",meta));$("#assistant-messages").append(m);$("#assistant-messages").scrollTop=$("#assistant-messages").scrollHeight}
-$("#assistant-form").onsubmit=async e=>{e.preventDefault();const q=$("#assistant-input").value.trim();if(!q||!state.repo)return;bubble("user",q);$("#assistant-input").value="";$("#assistant-send").disabled=true;$("#assistant-status").textContent=t("thinking");const history=state.chat.slice(-8);try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository:state.repo,question:q,locale:state.locale,activeFile:state.activeFile,history,context:state.ir,accessMode:state.accessMode})}),p=await r.json();if(!r.ok)throw Error(p.error||t("chatFail"));bubble("assistant",p.answer,p.model||"");state.chat.push({role:"user",content:q},{role:"assistant",content:p.answer})}catch(err){bubble("assistant",err.message.includes("not configured")?t("keyMissing"):err.message)}finally{$("#assistant-send").disabled=false;$("#assistant-status").textContent=""}};
+$("#assistant-form").onsubmit=async e=>{e.preventDefault();const q=$("#assistant-input").value.trim();if(!q||!state.repo)return;bubble("user",q);$("#assistant-input").value="";$("#assistant-send").disabled=true;$("#assistant-status").textContent=t("thinking");const history=state.chat.slice(-8);try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository:state.repo,question:q,locale:state.locale,activeFile:state.activeFile,lens:state.lens,history,context:state.ir,accessMode:state.accessMode})}),p=await r.json();if(!r.ok)throw Error(p.error||t("chatFail"));bubble("assistant",p.answer,p.model||"");state.chat.push({role:"user",content:q},{role:"assistant",content:p.answer})}catch(err){bubble("assistant",err.message.includes("not configured")?t("keyMissing"):err.message)}finally{$("#assistant-send").disabled=false;$("#assistant-status").textContent=""}};
 
 function setSourceMode(mode){
  state.accessMode=mode==="github_app"?"github_app":"public";
