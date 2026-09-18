@@ -91,6 +91,16 @@ function mergeCoverage(target, source) {
 
 async function fetchCandidateContent(tree, file, options) {
   try {
+    if (!options.token) {
+      const path = file.path.split('/').map(encodeURIComponent).join('/');
+      const rawUrl = `https://raw.githubusercontent.com/${tree.parsed.owner}/${tree.parsed.repo}/${encodeURIComponent(tree.ref)}/${path}`;
+      const response = await options.fetchImpl(rawUrl, {
+        headers: { 'User-Agent': 'AVGL/0.5' }
+      });
+      if (!response.ok) return { file, error: `HTTP ${response.status}` };
+      return { file: { ...file, content: await response.text() }, error: null };
+    }
+
     const response = await options.fetchImpl(
       tree.apiBase + '/git/blobs/' + encodeURIComponent(file.sha),
       { headers: githubHeaders(options.token) }
