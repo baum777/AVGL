@@ -106,7 +106,12 @@
             <span id="system-nav-scope" class="meta-chip">repository</span>
           </div>
           <div id="system-nav-body" class="system-nav-body">
-            <p class="shell-empty">Repository structure will be anchored here in the next migration step.</p>
+            <div class="system-nav-tools">
+              <input id="file-search" type="search" data-i18n-placeholder="searchFiles" placeholder="Search files…">
+              <span id="file-count" class="meta-chip"></span>
+            </div>
+            <div id="tree-warning" class="notice" hidden></div>
+            <div id="file-tree" class="file-tree" aria-label="Repository files"></div>
           </div>
         </aside>
 
@@ -124,50 +129,30 @@
         <div class="files-toolbar">
           <div>
             <h3 data-i18n="filesTitle">Repository structure</h3>
-            <p data-i18n="filesIntro">Browse the repository by hierarchy. Select a file to get a grounded description of its role, content, and likely effect.</p>
-          </div>
-          <div class="file-search-wrap">
-            <input id="file-search" type="search" data-i18n-placeholder="searchFiles" placeholder="Search files…">
-            <span id="file-count" class="meta-chip"></span>
+            <p data-i18n="filesIntro">Select an object in the System navigator to inspect its source-backed relations and effects.</p>
           </div>
         </div>
-        <div id="tree-warning" class="notice" hidden></div>
-        <div class="files-layout">
-          <aside class="file-tree-panel" aria-label="Repository files">
-            <div id="file-tree" class="file-tree"></div>
-          </aside>
-          <section class="file-detail-panel" aria-live="polite">
-            <div id="file-empty" class="file-empty">
-              <div class="file-empty-icon">↳</div>
-              <strong data-i18n="selectFile">Select a file</strong>
-              <span data-i18n="selectFileHint">AVGL will explain what it contains, what role it plays, and which semantic areas it touches.</span>
+        <div id="structure-empty" class="projection-empty">
+          <strong data-i18n="selectFile">Select a file</strong>
+          <span data-i18n="selectFileHint">Follow structure on the left; AVGL keeps object context and effects attached to the selection.</span>
+        </div>
+        <div id="structure-object" class="structure-object" hidden>
+          <div class="structure-object-head">
+            <div>
+              <p class="eyebrow">Selected object</p>
+              <h3 id="structure-object-path"></h3>
             </div>
-            <div id="file-detail" hidden>
-              <div class="file-detail-head">
-                <div>
-                  <p id="file-role" class="eyebrow"></p>
-                  <h3 id="file-path"></h3>
-                </div>
-                <div id="file-tags" class="scan-meta"></div>
-              </div>
-              <p id="file-summary" class="file-summary"></p>
-              <div id="file-facts" class="file-facts"></div>
-              <div class="file-relation-grid">
-                <section class="file-relation-panel">
-                  <p class="eyebrow" data-i18n="relationsTitle">How is it connected?</p>
-                  <div id="file-relations" class="relation-list"></div>
-                </section>
-                <section class="file-relation-panel">
-                  <p class="eyebrow" data-i18n="effectsTitle">What does it affect?</p>
-                  <div id="file-effects" class="relation-list"></div>
-                </section>
-              </div>
-              <details class="source-excerpt">
-                <summary data-i18n="sourceExcerpt">Source excerpt</summary>
-                <pre id="file-excerpt"></pre>
-              </details>
-            </div>
-          </section>
+          </div>
+          <div class="file-relation-grid">
+            <section class="file-relation-panel">
+              <p class="eyebrow" data-i18n="relationsTitle">How is it connected?</p>
+              <div id="file-relations" class="relation-list"></div>
+            </section>
+            <section class="file-relation-panel">
+              <p class="eyebrow" data-i18n="effectsTitle">What does it affect?</p>
+              <div id="file-effects" class="relation-list"></div>
+            </section>
+          </div>
         </div>
       </div>
 
@@ -182,21 +167,35 @@
               <strong id="context-selection">No selection</strong>
             </div>
           </div>
-          <div class="context-section">
-            <span>Identities</span>
-            <div id="context-identities" class="context-value">Select an object to inspect its semantic roles.</div>
+          <div id="file-empty" class="context-empty">
+            <strong data-i18n="selectFile">Select a file</strong>
+            <span data-i18n="selectFileHint">AVGL keeps the selected object's role, identities, effects and evidence here.</span>
           </div>
-          <div class="context-section">
-            <span>Relations</span>
-            <div id="context-relations" class="context-value">—</div>
-          </div>
-          <div class="context-section">
-            <span>Effect</span>
-            <div id="context-effect" class="context-value">—</div>
-          </div>
-          <div class="context-section">
-            <span>Evidence</span>
-            <div id="context-evidence" class="context-value">—</div>
+          <div id="file-detail" hidden>
+            <p id="file-role" class="eyebrow"></p>
+            <h3 id="file-path" class="context-path"></h3>
+            <p id="file-summary" class="file-summary context-summary"></p>
+            <div class="context-section">
+              <span>Identities</span>
+              <div id="context-identities" class="context-value"><div id="file-tags" class="scan-meta context-tags"></div></div>
+            </div>
+            <div id="file-facts" class="file-facts context-facts"></div>
+            <div class="context-section">
+              <span>Relations</span>
+              <div id="context-relations" class="context-value">—</div>
+            </div>
+            <div class="context-section">
+              <span>Effect</span>
+              <div id="context-effect" class="context-value">—</div>
+            </div>
+            <div class="context-section">
+              <span>Evidence</span>
+              <div id="context-evidence" class="context-value">—</div>
+            </div>
+            <details class="source-excerpt context-source">
+              <summary data-i18n="sourceExcerpt">Source excerpt</summary>
+              <pre id="file-excerpt"></pre>
+            </details>
           </div>
         </aside>
       </div>
