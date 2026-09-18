@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## Normative architecture
+
+[`AVGL_SOURCE_OF_TRUTH.md`](AVGL_SOURCE_OF_TRUTH.md) is the authoritative architecture and product-intent definition. [`AVGL_IMPLEMENTATION_WORKING_PLAN.md`](AVGL_IMPLEMENTATION_WORKING_PLAN.md) is the active scoped implementation plan.
+
+If this file, older v0.1 docs, code comments, or implementation details conflict with the Source of Truth, **the Source of Truth wins** unless an explicit owner-approved revision supersedes it. Do not change frozen architecture decisions incidentally while implementing a ticket.
+
 ## Purpose
 
 AVGL exists to make agent systems easier to understand than graph-heavy LLM wikis or repository maps.
@@ -17,16 +23,26 @@ AVGL exists to make agent systems easier to understand than graph-heavy LLM wiki
 9. **Progressive disclosure.** Story is primary; implementation details belong in inspect/system views.
 10. **One IR, multiple views.** Story, Harness Card, architecture, and future runtime views must derive from the same AVGL IR.
 
-## Semantic kernel
+## Current v0.1 agentic semantic spine
 
 ```text
 WHO → KNOW → THINK → CAN → MAY → ACT → DID
 ```
 
+This spine remains a required Agentic/Governance vocabulary and projection. It is **not** the universal AVGL kernel. The architecture-first universal kernel is defined by the Source of Truth as Object, Space, Boundary, Relation, Flow, State, Transformation, and Identity.
+
 ## Compiler pipeline
 
+Current baseline:
+
 ```text
-DISCOVER → CLASSIFY → BIND → PROJECT
+DISCOVER → CLASSIFY → BIND → SYNTHESIZE → PROJECT
+```
+
+Target architecture-first pipeline is defined in the Source of Truth and working plan:
+
+```text
+DISCOVER → EXTRACT → CLASSIFY → BIND → RELATE → RESOLVE → SYNTHESIZE → PROJECT
 ```
 
 ## Change expectations
@@ -36,4 +52,7 @@ DISCOVER → CLASSIFY → BIND → PROJECT
 - Do not infer relations/call paths merely because two nodes share a file.
 - Preserve explicit `unknowns` in the IR.
 - Keep the generic scanner dependency-light and runnable locally.
-- Framework-specific behavior belongs behind adapters rather than hard-coded into the generic semantic kernel.
+- Framework-specific behavior belongs behind adapters rather than hard-coded into the universal kernel.
+- New structural semantics must distinguish containment, dependency, inheritance, override, derivation, effective state, and effect rather than collapsing them into generic edges.
+- One artifact may hold multiple identities; do not create duplicate source objects merely to express different vocabulary roles.
+- Renderer layout is never semantic truth. Every asserted object, identity, relation, state, or effect must be represented in the IR and evidence-bound or explicitly unknown.
