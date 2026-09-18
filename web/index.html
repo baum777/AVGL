@@ -89,13 +89,28 @@
       <div id="workspace-result" class="workspace-result" hidden></div>
     </section>
 
-    <section id="result" class="result" hidden aria-live="polite">
+    <section id="result" class="result system-workspace" hidden aria-live="polite">
       <div class="result-head">
         <div><p class="eyebrow" data-i18n="analysisEyebrow">Analysis</p><h2 id="result-title">Repository</h2></div>
         <div id="scan-meta" class="scan-meta"></div>
       </div>
       <div id="partial-warning" class="notice" hidden></div>
 
+      <div class="system-shell">
+        <aside class="system-sidebar" aria-label="System structure">
+          <div class="shell-panel-head">
+            <div>
+              <p class="eyebrow">System</p>
+              <strong id="system-nav-title">Structure</strong>
+            </div>
+            <span id="system-nav-scope" class="meta-chip">repository</span>
+          </div>
+          <div id="system-nav-body" class="system-nav-body">
+            <p class="shell-empty">Repository structure will be anchored here in the next migration step.</p>
+          </div>
+        </aside>
+
+        <section class="projection-stage" aria-label="Current projection">
       <nav class="view-tabs" aria-label="Analysis views">
         <button type="button" class="view-tab active" data-view="story" aria-selected="true" data-i18n="tabStory">Story</button>
         <button type="button" class="view-tab" data-view="files" aria-selected="false" data-i18n="tabFiles">Files</button>
@@ -158,6 +173,34 @@
 
       <div id="inspect-view" class="view-panel" hidden></div>
       <div id="system-view" class="view-panel" hidden></div>
+        </section>
+
+        <aside class="context-sidebar" aria-label="Selection context">
+          <div class="shell-panel-head">
+            <div>
+              <p class="eyebrow">Context</p>
+              <strong id="context-selection">No selection</strong>
+            </div>
+          </div>
+          <div class="context-section">
+            <span>Identities</span>
+            <div id="context-identities" class="context-value">Select an object to inspect its semantic roles.</div>
+          </div>
+          <div class="context-section">
+            <span>Relations</span>
+            <div id="context-relations" class="context-value">—</div>
+          </div>
+          <div class="context-section">
+            <span>Effect</span>
+            <div id="context-effect" class="context-value">—</div>
+          </div>
+          <div class="context-section">
+            <span>Evidence</span>
+            <div id="context-evidence" class="context-value">—</div>
+          </div>
+        </aside>
+      </div>
+      <div id="navigation-trail" class="navigation-trail">Navigation: repository</div>
     </section>
 
     <section class="principle-strip" aria-label="AVGL principles">
