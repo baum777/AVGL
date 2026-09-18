@@ -31,6 +31,14 @@
           <input id="repository" name="repository" type="text" inputmode="url" autocomplete="off" placeholder="github.com/owner/repository" required>
           <button id="analyze-button" class="primary-button" type="submit" data-i18n="analyze">Analyze</button>
         </div>
+        <div class="scan-mode-row">
+          <span class="scan-mode-label" data-i18n="scanModeLabel">Scan mode</span>
+          <div class="scan-mode-toggle" role="group" aria-label="Scan mode">
+            <button id="scan-full" class="scan-mode-button active" type="button" data-scan="full" data-i18n="scanFull">Full</button>
+            <button id="scan-quick" class="scan-mode-button" type="button" data-scan="bounded" data-i18n="scanQuick">Quick · 120</button>
+          </div>
+          <span id="scan-mode-hint" class="scan-mode-hint" data-i18n="scanFullHint">Scans every eligible text/code file in the complete Git tree.</span>
+        </div>
         <div class="form-foot">
           <p data-i18n="repoHelp">v0.2 analyzes public GitHub repositories. Private repository auth is not enabled yet.</p>
         </div>
