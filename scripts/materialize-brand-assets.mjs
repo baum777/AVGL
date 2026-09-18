@@ -8,6 +8,12 @@ const prefix = "AVGL_FULL_ASSET_PACKAGE/";
 const zip = fs.readFileSync(zipPath);
 const entries = parseEntries(zip).filter(entry => !entry.name.endsWith("/") && entry.name.startsWith(prefix));
 
+if (process.argv.includes("--list")) {
+  for (const entry of entries) console.log(entry.name.slice(prefix.length));
+  console.error(entries.length + " bundled AVGL assets");
+  process.exit(0);
+}
+
 fs.rmSync(targetRoot, { recursive: true, force: true });
 fs.mkdirSync(targetRoot, { recursive: true });
 
