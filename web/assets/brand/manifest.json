@@ -1,0 +1,459 @@
+{
+  "package": "AVGL Full Asset Package",
+  "version": "1.0",
+  "assetCount": 113,
+  "files": [
+    {
+      "path": "01_logos/png/avgl-primary-horizontal-light.png",
+      "bytes": 39462
+    },
+    {
+      "path": "01_logos/png/avgl-primary-horizontal.png",
+      "bytes": 42719
+    },
+    {
+      "path": "01_logos/png/avgl-primary-stacked.png",
+      "bytes": 14431
+    },
+    {
+      "path": "01_logos/png/avgl-symbol-micro.png",
+      "bytes": 3752
+    },
+    {
+      "path": "01_logos/png/avgl-symbol-mono-dark.png",
+      "bytes": 5263
+    },
+    {
+      "path": "01_logos/png/avgl-symbol-mono-light.png",
+      "bytes": 4849
+    },
+    {
+      "path": "01_logos/png/avgl-symbol-primary.png",
+      "bytes": 5402
+    },
+    {
+      "path": "01_logos/png/avgl-technical-lockup.png",
+      "bytes": 10456
+    },
+    {
+      "path": "01_logos/png/avgl-wordmark-light.png",
+      "bytes": 5350
+    },
+    {
+      "path": "01_logos/png/avgl-wordmark.png",
+      "bytes": 5314
+    },
+    {
+      "path": "01_logos/svg/avgl-primary-horizontal-light.svg",
+      "bytes": 1976
+    },
+    {
+      "path": "01_logos/svg/avgl-primary-horizontal.svg",
+      "bytes": 1927
+    },
+    {
+      "path": "01_logos/svg/avgl-primary-stacked.svg",
+      "bytes": 1928
+    },
+    {
+      "path": "01_logos/svg/avgl-symbol-micro.svg",
+      "bytes": 1208
+    },
+    {
+      "path": "01_logos/svg/avgl-symbol-mono-dark.svg",
+      "bytes": 1205
+    },
+    {
+      "path": "01_logos/svg/avgl-symbol-mono-light.svg",
+      "bytes": 1254
+    },
+    {
+      "path": "01_logos/svg/avgl-symbol-primary.svg",
+      "bytes": 1205
+    },
+    {
+      "path": "01_logos/svg/avgl-technical-lockup.svg",
+      "bytes": 1967
+    },
+    {
+      "path": "01_logos/svg/avgl-wordmark-light.svg",
+      "bytes": 704
+    },
+    {
+      "path": "01_logos/svg/avgl-wordmark.svg",
+      "bytes": 655
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-dark-1024.png",
+      "bytes": 31788
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-dark-180.png",
+      "bytes": 4927
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-dark-192.png",
+      "bytes": 5372
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-dark-256.png",
+      "bytes": 7490
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-dark-512.png",
+      "bytes": 15258
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-dark.svg",
+      "bytes": 1313
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-light-1024.png",
+      "bytes": 30338
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-light-180.png",
+      "bytes": 4746
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-light-192.png",
+      "bytes": 5176
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-light-256.png",
+      "bytes": 7204
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-light-512.png",
+      "bytes": 14592
+    },
+    {
+      "path": "02_favicon_appicons/avgl-app-icon-light.svg",
+      "bytes": 1313
+    },
+    {
+      "path": "02_favicon_appicons/favicon-16.png",
+      "bytes": 356
+    },
+    {
+      "path": "02_favicon_appicons/favicon-32.png",
+      "bytes": 626
+    },
+    {
+      "path": "02_favicon_appicons/favicon-48.png",
+      "bytes": 825
+    },
+    {
+      "path": "02_favicon_appicons/favicon-64.png",
+      "bytes": 1060
+    },
+    {
+      "path": "02_favicon_appicons/favicon.ico",
+      "bytes": 4196
+    },
+    {
+      "path": "02_favicon_appicons/favicon.svg",
+      "bytes": 1204
+    },
+    {
+      "path": "02_favicon_appicons/site.webmanifest",
+      "bytes": 367
+    },
+    {
+      "path": "03_foundations/avgl-color-palette.png",
+      "bytes": 10894
+    },
+    {
+      "path": "03_foundations/avgl-color-palette.svg",
+      "bytes": 1944
+    },
+    {
+      "path": "03_foundations/design-tokens.css",
+      "bytes": 461
+    },
+    {
+      "path": "03_foundations/design-tokens.json",
+      "bytes": 780
+    },
+    {
+      "path": "03_foundations/typography.md",
+      "bytes": 457
+    },
+    {
+      "path": "04_iconography/AVGL_iconography_contact_sheet.png",
+      "bytes": 49411
+    },
+    {
+      "path": "04_iconography/AVGL_iconography_contact_sheet.svg",
+      "bytes": 16622
+    },
+    {
+      "path": "04_iconography/core/avgl-boundary.svg",
+      "bytes": 215
+    },
+    {
+      "path": "04_iconography/core/avgl-flow.svg",
+      "bytes": 324
+    },
+    {
+      "path": "04_iconography/core/avgl-identity.svg",
+      "bytes": 269
+    },
+    {
+      "path": "04_iconography/core/avgl-object.svg",
+      "bytes": 252
+    },
+    {
+      "path": "04_iconography/core/avgl-relation.svg",
+      "bytes": 343
+    },
+    {
+      "path": "04_iconography/core/avgl-space.svg",
+      "bytes": 268
+    },
+    {
+      "path": "04_iconography/core/avgl-state.svg",
+      "bytes": 224
+    },
+    {
+      "path": "04_iconography/core/avgl-transformation.svg",
+      "bytes": 328
+    },
+    {
+      "path": "04_iconography/lenses/avgl-agentic.svg",
+      "bytes": 520
+    },
+    {
+      "path": "04_iconography/lenses/avgl-context.svg",
+      "bytes": 455
+    },
+    {
+      "path": "04_iconography/lenses/avgl-effective.svg",
+      "bytes": 510
+    },
+    {
+      "path": "04_iconography/lenses/avgl-evidence.svg",
+      "bytes": 547
+    },
+    {
+      "path": "04_iconography/lenses/avgl-inheritance.svg",
+      "bytes": 467
+    },
+    {
+      "path": "04_iconography/lenses/avgl-propagation.svg",
+      "bytes": 613
+    },
+    {
+      "path": "04_iconography/lenses/avgl-structure.svg",
+      "bytes": 456
+    },
+    {
+      "path": "04_iconography/states/avgl-active.svg",
+      "bytes": 135
+    },
+    {
+      "path": "04_iconography/states/avgl-blocked.svg",
+      "bytes": 249
+    },
+    {
+      "path": "04_iconography/states/avgl-error.svg",
+      "bytes": 232
+    },
+    {
+      "path": "04_iconography/states/avgl-inactive.svg",
+      "bytes": 168
+    },
+    {
+      "path": "04_iconography/states/avgl-loading.svg",
+      "bytes": 268
+    },
+    {
+      "path": "04_iconography/states/avgl-success.svg",
+      "bytes": 241
+    },
+    {
+      "path": "04_iconography/states/avgl-unknown.svg",
+      "bytes": 268
+    },
+    {
+      "path": "04_iconography/states/avgl-warning.svg",
+      "bytes": 226
+    },
+    {
+      "path": "04_iconography/ui/avgl-analyze.svg",
+      "bytes": 211
+    },
+    {
+      "path": "04_iconography/ui/avgl-assistant.svg",
+      "bytes": 252
+    },
+    {
+      "path": "04_iconography/ui/avgl-collapse.svg",
+      "bytes": 187
+    },
+    {
+      "path": "04_iconography/ui/avgl-context.svg",
+      "bytes": 248
+    },
+    {
+      "path": "04_iconography/ui/avgl-expand.svg",
+      "bytes": 186
+    },
+    {
+      "path": "04_iconography/ui/avgl-export.svg",
+      "bytes": 247
+    },
+    {
+      "path": "04_iconography/ui/avgl-external.svg",
+      "bytes": 258
+    },
+    {
+      "path": "04_iconography/ui/avgl-file.svg",
+      "bytes": 234
+    },
+    {
+      "path": "04_iconography/ui/avgl-folder.svg",
+      "bytes": 167
+    },
+    {
+      "path": "04_iconography/ui/avgl-inspect.svg",
+      "bytes": 214
+    },
+    {
+      "path": "04_iconography/ui/avgl-navigation.svg",
+      "bytes": 215
+    },
+    {
+      "path": "04_iconography/ui/avgl-relation.svg",
+      "bytes": 343
+    },
+    {
+      "path": "04_iconography/ui/avgl-repository.svg",
+      "bytes": 214
+    },
+    {
+      "path": "04_iconography/ui/avgl-search.svg",
+      "bytes": 243
+    },
+    {
+      "path": "04_iconography/ui/avgl-settings.svg",
+      "bytes": 308
+    },
+    {
+      "path": "04_iconography/ui/avgl-workspace.svg",
+      "bytes": 357
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-evidence.png",
+      "bytes": 20207
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-evidence.svg",
+      "bytes": 1716
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-file.png",
+      "bytes": 19003
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-file.svg",
+      "bytes": 1704
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-propagation.png",
+      "bytes": 22725
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-propagation.svg",
+      "bytes": 1704
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-repository.png",
+      "bytes": 25053
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-no-repository.svg",
+      "bytes": 1653
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-workspace-empty.png",
+      "bytes": 24258
+    },
+    {
+      "path": "05_ui_assets/empty_states/avgl-empty-workspace-empty.svg",
+      "bytes": 1801
+    },
+    {
+      "path": "05_ui_assets/patterns/avgl-grid-pattern.svg",
+      "bytes": 366
+    },
+    {
+      "path": "06_marketing/og/avgl-og-github.png",
+      "bytes": 22161
+    },
+    {
+      "path": "06_marketing/og/avgl-og-github.svg",
+      "bytes": 1677
+    },
+    {
+      "path": "06_marketing/og/avgl-og-main.png",
+      "bytes": 20934
+    },
+    {
+      "path": "06_marketing/og/avgl-og-main.svg",
+      "bytes": 1664
+    },
+    {
+      "path": "06_marketing/og/avgl-og-workspace.png",
+      "bytes": 28127
+    },
+    {
+      "path": "06_marketing/og/avgl-og-workspace.svg",
+      "bytes": 1691
+    },
+    {
+      "path": "06_marketing/posters/avgl-launch-poster.png",
+      "bytes": 43998
+    },
+    {
+      "path": "06_marketing/posters/avgl-launch-poster.svg",
+      "bytes": 1747
+    },
+    {
+      "path": "06_marketing/social/avgl-social-avatar.png",
+      "bytes": 12228
+    },
+    {
+      "path": "06_marketing/social/avgl-social-avatar.svg",
+      "bytes": 1278
+    },
+    {
+      "path": "06_marketing/social/avgl-social-square.png",
+      "bytes": 24376
+    },
+    {
+      "path": "06_marketing/social/avgl-social-square.svg",
+      "bytes": 1468
+    },
+    {
+      "path": "07_mockups_reference/AVGL_concept_2_layered_projection_reference.png",
+      "bytes": 2182115
+    },
+    {
+      "path": "08_guidelines/AVGL_BRAND_GUIDELINES.md",
+      "bytes": 2033
+    },
+    {
+      "path": "08_guidelines/AVGL_BRAND_GUIDELINES.pdf",
+      "bytes": 2151159
+    },
+    {
+      "path": "09_source_files/avgl-icon-sprite.svg",
+      "bytes": 10258
+    },
+    {
+      "path": "README.md",
+      "bytes": 912
+    }
+  ]
+}
