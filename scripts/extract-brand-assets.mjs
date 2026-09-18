@@ -17,6 +17,12 @@ const entries = parseEntries(zip).filter((entry) =>
   !entry.name.endsWith("/") && entry.name.startsWith(SOURCE_PREFIX)
 );
 
+if (process.argv.includes("--list")) {
+  for (const entry of entries) console.log(entry.name.slice(SOURCE_PREFIX.length));
+  console.error(`${entries.length} bundled AVGL assets`);
+  process.exit(0);
+}
+
 for (const entry of entries) {
   const relative = entry.name.slice(SOURCE_PREFIX.length);
   const outputPath = path.join(targetRoot, relative);
