@@ -24,6 +24,12 @@ export {
   verifyUserInstallationAccess
 } from './github-app-auth.js';
 export { extractRelationFacts, resolveRelations, traceEffectChains, buildRelationModel } from './relations.js';
+export {
+  SEMANTIC_RESOLVER_VERSION,
+  resolveSemanticCandidate,
+  createSemanticResolutionSummary,
+  mergeSemanticResolutionSummaries
+} from './semantic-resolution.js';
 export { discoverGitHubRepository, parseGitHubRepository, selectGitHubCandidates };
 export { projectStory, projectHarnessCard, projectJson } from './project.js';
 export { SEMANTIC_CLASSES, EVIDENCE_STATES, HUMAN_LABELS } from './constants.js';
