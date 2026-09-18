@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 300" role="img" aria-labelledby="title desc">
+  <title id="title">AVGL favicon and semantic iconography</title><desc id="desc">AVGL grammar mark and semantic icons for WHO, KNOW, THINK, CAN, MAY, ACT and DID.</desc>
+  <rect width="980" height="300" rx="28" fill="#F6F7F8"/>
+  <text x="44" y="48" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="700" fill="#697179" letter-spacing="2">AVGL · EVIDENCE-BOUND ICONOGRAPHY</text>
+  <g transform="translate(44 78)"><rect x="2" y="2" width="84" height="84" rx="21" fill="#111417"/><path d="M26 19h-6v50h6" fill="none" stroke="#F3F5F6" stroke-width="5.5" stroke-linecap="round"/><path d="M32 28h19M32 44h28M32 60h37" fill="none" stroke="#F3F5F6" stroke-width="5.5" stroke-linecap="round"/><circle cx="56" cy="28" r="4.3" fill="#78AAFF"/><circle cx="65" cy="44" r="4.3" fill="#78AAFF"/><circle cx="74" cy="60" r="4.3" fill="#78AAFF"/></g>
+  <text x="44" y="194" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800" fill="#111417">Grammar mark</text><text x="44" y="220" font-family="Inter,Arial,sans-serif" font-size="13" fill="#697179">bounded input → semantic structure → readable projection</text>
+  <g fill="none" stroke="#111417" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(274 88) scale(2.2)"><circle cx="12" cy="7.6" r="3.1"/><path d="M5.5 19c.9-3.8 3.1-5.8 6.5-5.8s5.6 2 6.5 5.8"/><circle cx="18.5" cy="18.5" r="1.6" fill="#1967D2" stroke="none"/></g>
+    <g transform="translate(374 88) scale(2.2)"><path d="M4.5 5.6c2.9-.7 5.3 0 7.5 2v11c-2.2-1.8-4.6-2.3-7.5-1.6z"/><path d="M19.5 5.6c-2.9-.7-5.3 0-7.5 2v11c2.2-1.8 4.6-2.3 7.5-1.6z"/><circle cx="19.2" cy="5.4" r="1.5" fill="#1967D2" stroke="none"/></g>
+    <g transform="translate(474 88) scale(2.2)"><path d="M5 7h6.2l3.2 3-3.2 3H5"/><path d="M8 17h6.2l2.6-2.4"/><circle cx="17.5" cy="13.9" r="1.6" fill="#1967D2" stroke="none"/></g>
+    <g transform="translate(574 88) scale(2.2)"><rect x="4.5" y="5.5" width="8.5" height="13" rx="2"/><path d="M13 12h5.5m-2.8-2.8 2.8 2.8-2.8 2.8"/><circle cx="19.7" cy="12" r="1.5" fill="#1967D2" stroke="none"/></g>
+    <g transform="translate(674 88) scale(2.2)"><path d="M12 3.7 18.8 6v5.1c0 4.3-2.4 7.4-6.8 9.2-4.4-1.8-6.8-4.9-6.8-9.2V6z"/><path d="m9.2 11.9 1.8 1.8 3.9-4"/><circle cx="18.8" cy="6" r="1.5" fill="#1967D2" stroke="none"/></g>
+    <g transform="translate(774 88) scale(2.2)"><rect x="4.5" y="5.5" width="8" height="13" rx="2"/><path d="M10 12h9m-3-3 3 3-3 3"/><circle cx="20.1" cy="12" r="1.5" fill="#1967D2" stroke="none"/></g>
+    <g transform="translate(874 88) scale(2.2)"><path d="M6 4.5h8.5l3.5 3.5v11.5H6z"/><path d="M14.5 4.5V8H18"/><path d="m9 13.2 1.8 1.8 4.1-4.2"/><circle cx="18" cy="19.5" r="1.5" fill="#1967D2" stroke="none"/></g>
+  </g>
+  <g font-family="ui-monospace,Menlo,monospace" font-size="12" font-weight="800" fill="#697179" text-anchor="middle"><text x="301" y="182">WHO</text><text x="401" y="182">KNOW</text><text x="501" y="182">THINK</text><text x="601" y="182">CAN</text><text x="701" y="182">MAY</text><text x="801" y="182">ACT</text><text x="901" y="182">DID</text></g>
+  <path d="M274 220H934" stroke="#DCE0E4"/><text x="274" y="250" font-family="Inter,Arial,sans-serif" font-size="13" fill="#697179">24×24 · 1.7 px round stroke · currentColor · blue evidence terminal</text>
+</svg>
