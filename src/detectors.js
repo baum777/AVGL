@@ -38,8 +38,8 @@ export const DETECTORS = Object.freeze([
     confidence: 0.76,
     evidenceState: 'INFERRED',
     patterns: [
-      /\b(tool|tools|mcp|function_call|functionCall|browser|shell|adapter|connector)\b/i,
-      /\b(apiClient|client\.request|fetch\()\b/i
+      /\b(tool|tools|mcp|function_call|functionCall|tool_choice|toolChoice|browser|shell|adapter|connector)\b/i,
+      /\b(registerTool|defineTool|createTool|McpServer|mcpServers|callTool|listTools|apiClient|client\.request|fetch\()\b/i
     ]
   },
   {
