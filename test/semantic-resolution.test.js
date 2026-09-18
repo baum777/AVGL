@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { classifyDiscoveries, discoverFiles } from '../src/index.js';
 
 const canonicalCanvasFixture = new URL('./fixtures/semantic-resolution/canvas-context-negative.mjs', import.meta.url);
+const canonicalWhoNegativeFixture = new URL('./fixtures/semantic-resolution/who-non-agent-negative.mjs', import.meta.url);
 
 test('canonical negative fixture rejects Canvas 2D context as agentic KNOW evidence', async () => {
   const content = await readFile(canonicalCanvasFixture, 'utf8');
@@ -63,16 +64,69 @@ test('generic context tokens fail closed instead of becoming KNOW by word match 
   assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-context-token'));
 });
 
-test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
-  const content = `export const agent = { role: 'reviewer' };`;
+test('canonical WHO negative fixture rejects User-Agent, UI role, and browser Worker', async () => {
+  const content = await readFile(canonicalWhoNegativeFixture, 'utf8');
   const discovery = discoverFiles([{
-    path: 'src/agent.mjs',
+    path: 'web/client.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const who = discovery.observations.filter((item) => item.candidateClass === 'WHO');
+  assert.equal(who.length, 0);
+  const rules = new Set(discovery.semanticRejections.filter((item) => item.candidateClass === 'WHO').map((item) => item.rule));
+  assert.equal(rules.has('http-user-agent'), true);
+  assert.equal(rules.has('ui-role'), true);
+  assert.equal(rules.has('browser-worker'), true);
+});
+
+test('WHO accepts structured agent definitions and preserves semantic provenance', () => {
+  const content = `
+    export const agent = {
+      role: 'reviewer',
+      instructions: 'Review the repository',
+      model,
+      tools: [runTests]
+    };
+  `;
+  const discovery = discoverFiles([{
+    path: 'src/agents/reviewer.mjs',
     content,
     size: Buffer.byteLength(content, 'utf8')
   }]);
 
   const who = discovery.observations.find((item) => item.candidateClass === 'WHO');
   assert.ok(who);
-  assert.equal(who.semanticResolution.mode, 'LEXICAL_FALLBACK');
+  assert.equal(who.semanticResolution.mode, 'SEMANTIC');
+  assert.equal(who.semanticResolution.resolver, 'who.actor.v1');
+  assert.match(who.semanticResolution.rule, /actor|agent|harness/);
+});
+
+test('generic worker or role tokens fail closed without agentic support', () => {
+  const content = `
+    const worker = queue.next();
+    const role = account.role;
+  `;
+  const discovery = discoverFiles([{
+    path: 'src/queue.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'WHO'), false);
+  assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-actor-token'));
+});
+
+test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
+  const content = `const model = openai.model('reasoning');`;
+  const discovery = discoverFiles([{
+    path: 'src/model.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const think = discovery.observations.find((item) => item.candidateClass === 'THINK');
+  assert.ok(think);
+  assert.equal(think.semanticResolution.mode, 'LEXICAL_FALLBACK');
   assert.equal(discovery.semanticResolution.lexicalFallbackAccepted > 0, true);
 });
