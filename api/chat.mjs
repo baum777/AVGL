@@ -60,6 +60,12 @@ export default async function handler(request, response) {
   if (Number(request.headers['content-length'] ?? 0) > MAX_BODY_BYTES) {
     return response.status(413).json({ error: 'Request body is too large.' });
   }
+  if (request.body?.accessMode === 'github_app' || request.body?.context?.sourceAccess?.mode === 'github_app') {
+    return response.status(403).json({
+      error: 'Remote provider chat is disabled for GitHub App private-repository context. Use LOCAL_PRIVATE or an explicitly approved inference policy.'
+    });
+  }
+
   if (!process.env.OPENROUTER_API_KEY) {
     return response.status(503).json({ error: 'OpenRouter is not configured on this deployment.' });
   }

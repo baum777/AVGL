@@ -1,4 +1,5 @@
 import { fetchRepositoryInventory } from '../src/repository-inspect.js';
+import { resolveGitHubAccess } from '../src/github-app-auth.js';
 
 const MAX_BODY_BYTES = 8 * 1024;
 
@@ -15,10 +16,12 @@ export default async function handler(request, response) {
   if (!repository) return response.status(400).json({ error: 'repository is required.' });
 
   try {
-    const inventory = await fetchRepositoryInventory(repository, { token: process.env.GITHUB_TOKEN || undefined });
+    const access = await resolveGitHubAccess(request, request.body);
+    const inventory = await fetchRepositoryInventory(repository, { token: access.token });
+    inventory.sourceAccess = { mode: access.mode, installationId: access.installationId };
     return response.status(200).json(inventory);
   } catch (error) {
-    const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 422;
+    const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 600 ? error.statusCode : 422;
     return response.status(status).json({ error: error?.message || 'Repository inventory failed.' });
   }
 }

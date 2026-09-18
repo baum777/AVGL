@@ -1,6 +1,6 @@
 {
   "name": "@avgl/core",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Evidence-bound repository analysis and human-first projections for AVGL",
   "type": "module",
   "bin": {
@@ -9,7 +9,7 @@
   "exports": "./src/index.js",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/*.js && node --check bin/avgl.js && node --check api/*.mjs && node --check web/*.js"
+    "check": "node --check src/*.js && node --check bin/avgl.js && node --check api/*.mjs && node --check api/github-app/*.mjs && node --check web/*.js"
   },
   "engines": {
     "node": ">=20"

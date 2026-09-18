@@ -56,3 +56,20 @@ DISCOVER → EXTRACT → CLASSIFY → BIND → RELATE → RESOLVE → SYNTHESIZE
 - New structural semantics must distinguish containment, dependency, inheritance, override, derivation, effective state, and effect rather than collapsing them into generic edges.
 - One artifact may hold multiple identities; do not create duplicate source objects merely to express different vocabulary roles.
 - Renderer layout is never semantic truth. Every asserted object, identity, relation, state, or effect must be represented in the IR and evidence-bound or explicitly unknown.
+
+
+## Private source invariants
+
+- GitHub App user access tokens and installation tokens are server-side only and short-lived.
+- Private-repository analysis must fail closed when user/session authority is absent or expired.
+- Do not send GitHub App private-repository source/context to a remote model provider by default.
+- `LOCAL_PRIVATE` transport IR must contain no raw source, `snippet`, `content`, or `excerpt` fields.
+- Claims of "zero knowledge" are prohibited unless the cloud never receives plaintext source; GitHub App cloud analysis is least-privilege/zero-retention-oriented, not cryptographic zero knowledge.
+
+## Workspace invariants
+
+- Cross-repository analysis must bind each repository to an immutable revision.
+- `EXPLICIT`, `INFERRED`, and `DERIVED` cross-repo relations remain distinct.
+- A repository dependency does not prove invocation.
+- Cross-repo reachability does not prove execution.
+- Derived effect chains must state their derivation and uncertainty.
