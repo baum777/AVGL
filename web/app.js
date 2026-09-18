@@ -180,7 +180,8 @@ const BRAND_STATIC_ROOT="/assets/brand/";
 const assetLibrary=$("#asset-library");
 let assetLibraryLoaded=false;
 function brandAssetUrl(path){
-  const relative=String(path||"").replace(BRAND_ASSET_PREFIX,"").replace(/^\\/+/,"");
+  let relative=String(path||"").replace(BRAND_ASSET_PREFIX,"");
+  while(relative.startsWith("/")) relative=relative.slice(1);
   return BRAND_STATIC_ROOT+relative.split("/").map(encodeURIComponent).join("/");
 }
 function assetCard(file){
