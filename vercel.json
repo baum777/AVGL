@@ -1,23 +1,49 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/analyze.mjs": { "maxDuration": 30 },
-    "api/repository.mjs": { "maxDuration": 20 },
-    "api/file.mjs": { "maxDuration": 20 },
-    "api/chat.mjs": { "maxDuration": 45 }
+    "api/analyze.mjs": {
+      "maxDuration": 300
+    },
+    "api/repository.mjs": {
+      "maxDuration": 60
+    },
+    "api/file.mjs": {
+      "maxDuration": 20
+    },
+    "api/chat.mjs": {
+      "maxDuration": 45
+    }
   },
   "rewrites": [
-    { "source": "/", "destination": "/web/index.html" },
-    { "source": "/styles.css", "destination": "/web/styles.css" },
-    { "source": "/app.js", "destination": "/web/app.js" }
+    {
+      "source": "/",
+      "destination": "/web/index.html"
+    },
+    {
+      "source": "/styles.css",
+      "destination": "/web/styles.css"
+    },
+    {
+      "source": "/app.js",
+      "destination": "/web/app.js"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
       ]
     }
   ]

@@ -2,9 +2,11 @@ import { MAX_FILE_BYTES } from './constants.js';
 import { discoverFiles, isSensitivePath, isTextCandidate, sourceKindForPath } from './discover.js';
 import { classifyDiscoveries } from './classify.js';
 import { bindAvglIr } from './bind.js';
+import { fetchCompleteGitHubTree, githubHeaders, parseGitHubRepository } from './github-tree.js';
 
 const DEFAULT_MAX_FILES = 120;
-const DEFAULT_CONCURRENCY = 6;
+const DEFAULT_CONCURRENCY = 10;
+const DEFAULT_BATCH_SIZE = 48;
 const SOURCE_QUOTA = Object.freeze({
   implementation: 0.65,
   config: 0.15,
@@ -13,50 +15,7 @@ const SOURCE_QUOTA = Object.freeze({
 });
 const SOURCE_ORDER = ['implementation', 'config', 'test', 'documentation', 'other'];
 
-function validPart(value) {
-  return /^[A-Za-z0-9_.-]+$/.test(value) && value !== '.' && value !== '..';
-}
-
-export function parseGitHubRepository(input) {
-  const value = String(input ?? '').trim();
-  if (!value) throw new Error('A GitHub repository is required.');
-
-  let owner;
-  let repo;
-
-  if (/^https?:\/\//i.test(value)) {
-    const url = new URL(value);
-    if (!['github.com', 'www.github.com'].includes(url.hostname.toLowerCase())) {
-      throw new Error('Only github.com repository URLs are supported.');
-    }
-    const parts = url.pathname.split('/').filter(Boolean);
-    if (parts.length !== 2) throw new Error('Use a repository URL such as https://github.com/owner/repo.');
-    [owner, repo] = parts;
-  } else {
-    const parts = value.split('/').filter(Boolean);
-    if (parts.length !== 2) throw new Error('Use owner/repo or a github.com repository URL.');
-    [owner, repo] = parts;
-  }
-
-  repo = repo.replace(/\.git$/i, '');
-  if (!validPart(owner) || !validPart(repo)) throw new Error('The GitHub repository identifier is invalid.');
-
-  return {
-    owner,
-    repo,
-    slug: `${owner}/${repo}`,
-    url: `https://github.com/${owner}/${repo}`
-  };
-}
-
-function headers(token, raw = false) {
-  const result = {
-    'User-Agent': 'AVGL/0.1',
-    Accept: raw ? 'text/plain' : 'application/vnd.github+json'
-  };
-  if (token) result.Authorization = `Bearer ${token}`;
-  return result;
-}
+export { parseGitHubRepository };
 
 async function mapConcurrent(items, limit, worker) {
   const output = new Array(items.length);
@@ -70,22 +29,19 @@ async function mapConcurrent(items, limit, worker) {
     }
   }
 
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => run());
-  await Promise.all(workers);
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, limit), items.length || 1) }, () => run()));
   return output;
 }
 
-async function expectJson(fetchImpl, url, token) {
-  const response = await fetchImpl(url, { headers: headers(token) });
-  if (!response.ok) {
-    const rate = response.status === 403 || response.status === 429;
-    const error = new Error(rate
-      ? 'GitHub API rate limit or access policy blocked the scan.'
-      : `GitHub request failed with status ${response.status}.`);
-    error.statusCode = response.status;
-    throw error;
-  }
-  return response.json();
+function chunks(items, size) {
+  const output = [];
+  for (let index = 0; index < items.length; index += size) output.push(items.slice(index, index + size));
+  return output;
+}
+
+function sourceOrder(file) {
+  const index = SOURCE_ORDER.indexOf(file.sourceKind);
+  return index < 0 ? SOURCE_ORDER.length : index;
 }
 
 export function selectGitHubCandidates(eligible, maxFiles) {
@@ -111,10 +67,7 @@ export function selectGitHubCandidates(eligible, maxFiles) {
   const remainder = eligible
     .map((file) => ({ ...file, sourceKind: file.sourceKind ?? sourceKindForPath(file.path) }))
     .filter((file) => !selectedPaths.has(file.path))
-    .sort((a, b) => {
-      const kindOrder = SOURCE_ORDER.indexOf(a.sourceKind) - SOURCE_ORDER.indexOf(b.sourceKind);
-      return kindOrder || a.path.localeCompare(b.path);
-    });
+    .sort((a, b) => sourceOrder(a) - sourceOrder(b) || a.path.localeCompare(b.path));
 
   for (const file of remainder) {
     if (selected.length >= maxFiles) break;
@@ -123,56 +76,132 @@ export function selectGitHubCandidates(eligible, maxFiles) {
   return selected;
 }
 
+function fullScanCandidates(eligible) {
+  return [...eligible].sort((a, b) => sourceOrder(a) - sourceOrder(b) || a.path.localeCompare(b.path));
+}
+
+function emptyCoverage() {
+  return { implementation: 0, config: 0, test: 0, documentation: 0, other: 0 };
+}
+
+function mergeCoverage(target, source) {
+  for (const key of Object.keys(target)) target[key] += source?.[key] ?? 0;
+}
+
+async function fetchCandidateContent(tree, file, options) {
+  const path = file.path.split('/').map(encodeURIComponent).join('/');
+  const rawUrl = `https://raw.githubusercontent.com/${tree.parsed.owner}/${tree.parsed.repo}/${encodeURIComponent(tree.ref)}/${path}`;
+  try {
+    const response = await options.fetchImpl(rawUrl, { headers: githubHeaders(options.token, true) });
+    if (!response.ok) return { file, error: `HTTP ${response.status}` };
+    return { file: { ...file, content: await response.text() }, error: null };
+  } catch (error) {
+    return { file, error: error?.message || 'fetch failed' };
+  }
+}
+
 export async function discoverGitHubRepository(input, options = {}) {
-  const parsed = parseGitHubRepository(input);
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   if (typeof fetchImpl !== 'function') throw new Error('No fetch implementation is available.');
 
-  const token = options.token;
+  const scanStrategy = options.scanStrategy === 'full' ? 'full' : 'bounded';
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
   const maxFileBytes = options.maxFileBytes ?? MAX_FILE_BYTES;
   const concurrency = options.concurrency ?? DEFAULT_CONCURRENCY;
+  const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
 
-  const apiBase = `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`;
-  const repository = await expectJson(fetchImpl, apiBase, token);
-  const ref = options.ref ?? repository.default_branch;
-  if (!ref) throw new Error('The GitHub repository has no default branch.');
-
-  const tree = await expectJson(fetchImpl, `${apiBase}/git/trees/${encodeURIComponent(ref)}?recursive=1`, token);
-  if (tree.truncated) throw new Error('The GitHub tree is too large for the v0.1 bounded scanner.');
-
-  const blobs = (tree.tree ?? [])
-    .filter((entry) => entry.type === 'blob' && typeof entry.path === 'string')
-    .map((entry) => ({ path: entry.path, size: entry.size ?? 0, sourceKind: sourceKindForPath(entry.path) }));
-
-  const eligible = blobs
-    .filter((file) => !isSensitivePath(file.path))
-    .filter((file) => isTextCandidate(file.path))
-    .filter((file) => file.size <= maxFileBytes);
-
-  const candidates = selectGitHubCandidates(eligible, maxFiles);
-  const contents = await mapConcurrent(candidates, concurrency, async (file) => {
-    const path = file.path.split('/').map(encodeURIComponent).join('/');
-    const rawUrl = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${encodeURIComponent(ref)}/${path}`;
-    const response = await fetchImpl(rawUrl, { headers: headers(token, true) });
-    if (!response.ok) return null;
-    return { ...file, content: await response.text() };
+  const tree = await fetchCompleteGitHubTree(input, {
+    fetchImpl,
+    token: options.token,
+    ref: options.ref,
+    treeConcurrency: options.treeConcurrency
   });
 
-  const byPath = new Map(contents.filter(Boolean).map((file) => [file.path, file]));
-  const files = blobs.map((file) => byPath.get(file.path) ?? file);
-  const partial = eligible.length > maxFiles;
+  const blobs = tree.entries
+    .filter((entry) => entry.type === 'blob' && typeof entry.path === 'string')
+    .map((entry) => ({
+      path: entry.path,
+      size: entry.size ?? 0,
+      sha: entry.sha,
+      sourceKind: sourceKindForPath(entry.path)
+    }));
 
-  return discoverFiles(files, {
-    kind: 'repository',
-    label: parsed.slug
-  }, {
-    maxFileBytes,
+  const sensitive = blobs.filter((file) => isSensitivePath(file.path));
+  const textCandidates = blobs.filter((file) => !isSensitivePath(file.path) && isTextCandidate(file.path));
+  const oversize = textCandidates.filter((file) => file.size > maxFileBytes);
+  const eligible = textCandidates.filter((file) => file.size <= maxFileBytes);
+  const unsupportedCount = Math.max(0, blobs.length - sensitive.length - textCandidates.length);
+
+  const candidates = scanStrategy === 'full'
+    ? fullScanCandidates(eligible)
+    : selectGitHubCandidates(eligible, maxFiles);
+
+  const observations = [];
+  const sourceCoverage = emptyCoverage();
+  const contentFetchFailures = [];
+  let filesScanned = 0;
+  let bytesScanned = 0;
+
+  for (const batch of chunks(candidates, batchSize)) {
+    const fetched = await mapConcurrent(batch, concurrency, (file) => fetchCandidateContent(tree, file, {
+      fetchImpl,
+      token: options.token
+    }));
+
+    const loaded = [];
+    for (const result of fetched) {
+      if (result.error) {
+        contentFetchFailures.push(result.file.path);
+        continue;
+      }
+      loaded.push(result.file);
+      bytesScanned += result.file.size ?? Buffer.byteLength(result.file.content ?? '', 'utf8');
+    }
+
+    if (loaded.length === 0) continue;
+
+    const batchDiscovery = discoverFiles(loaded, {
+      kind: 'repository',
+      label: tree.parsed.slug
+    }, {
+      maxFileBytes,
+      filesSeen: loaded.length,
+      filesEligible: loaded.length,
+      scanComplete: true,
+      analysisMode: 'github-batch'
+    });
+
+    filesScanned += batchDiscovery.filesScanned;
+    observations.push(...batchDiscovery.observations);
+    mergeCoverage(sourceCoverage, batchDiscovery.sourceCoverage);
+  }
+
+  const selectedAllEligible = candidates.length === eligible.length;
+  const scanComplete = Boolean(tree.treeComplete) && selectedAllEligible && contentFetchFailures.length === 0;
+  const analysisMode = scanStrategy === 'full'
+    ? (scanComplete ? 'github-static-full' : 'github-static-full-incomplete')
+    : (scanComplete ? 'github-static-baseline' : 'github-static-baseline-partial');
+
+  return {
+    source: { kind: 'repository', label: tree.parsed.slug },
+    generatedAt: new Date().toISOString(),
     filesSeen: blobs.length,
     filesEligible: eligible.length,
-    scanComplete: !partial,
-    analysisMode: partial ? 'github-static-baseline-partial' : 'github-static-baseline'
-  });
+    filesSelected: candidates.length,
+    filesScanned,
+    bytesScanned,
+    scanComplete,
+    scanStrategy,
+    treeComplete: Boolean(tree.treeComplete),
+    treeFallbackUsed: Boolean(tree.treeFallbackUsed),
+    unsupportedFileCount: unsupportedCount,
+    sourceCoverage,
+    skippedSensitive: sensitive.map((file) => file.path),
+    skippedOversize: oversize.map((file) => file.path),
+    contentFetchFailures,
+    analysisMode,
+    observations
+  };
 }
 
 export async function analyzeGitHubRepository(input, options = {}) {

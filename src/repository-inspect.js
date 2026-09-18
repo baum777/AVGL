@@ -1,94 +1,44 @@
 import { sourceKindForPath } from './discover.js';
+import { fetchCompleteGitHubTree, parseGitHubRepository } from './github-tree.js';
 
 const MAX_DETAIL_BYTES = 320 * 1024;
 const MAX_CHAT_FILE_BYTES = 96 * 1024;
-const MAX_TREE_FILES = 5000;
-
-function validPart(value) {
-  return /^[A-Za-z0-9_.-]+$/.test(value) && value !== '.' && value !== '..';
-}
 
 export function parseRepository(input) {
-  const value = String(input ?? '').trim();
-  if (!value) throw Object.assign(new Error('A GitHub repository is required.'), { statusCode: 400 });
-
-  let owner;
-  let repo;
-  if (/^https?:\/\//i.test(value)) {
-    const url = new URL(value);
-    if (!['github.com', 'www.github.com'].includes(url.hostname.toLowerCase())) {
-      throw Object.assign(new Error('Only github.com repository URLs are supported.'), { statusCode: 400 });
-    }
-    const parts = url.pathname.split('/').filter(Boolean);
-    if (parts.length !== 2) throw Object.assign(new Error('Use a repository URL such as https://github.com/owner/repo.'), { statusCode: 400 });
-    [owner, repo] = parts;
-  } else {
-    const parts = value.split('/').filter(Boolean);
-    if (parts.length !== 2) throw Object.assign(new Error('Use owner/repo or a github.com repository URL.'), { statusCode: 400 });
-    [owner, repo] = parts;
-  }
-
-  repo = repo.replace(/\.git$/i, '');
-  if (!validPart(owner) || !validPart(repo)) {
-    throw Object.assign(new Error('The GitHub repository identifier is invalid.'), { statusCode: 400 });
-  }
-  return { owner, repo, slug: `${owner}/${repo}` };
-}
-
-function githubHeaders(token) {
-  const headers = {
-    Accept: 'application/vnd.github+json',
-    'User-Agent': 'AVGL/0.2'
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
-async function expectJson(fetchImpl, url, token) {
-  const response = await fetchImpl(url, { headers: githubHeaders(token) });
-  if (!response.ok) {
-    const error = new Error(
-      response.status === 403 || response.status === 429
-        ? 'GitHub rate limit or access policy blocked the request.'
-        : `GitHub request failed with status ${response.status}.`
-    );
-    error.statusCode = response.status;
-    throw error;
-  }
-  return response.json();
+  const parsed = parseGitHubRepository(input);
+  return { owner: parsed.owner, repo: parsed.repo, slug: parsed.slug };
 }
 
 export async function fetchRepositoryInventory(input, options = {}) {
-  const parsed = parseRepository(input);
-  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  if (typeof fetchImpl !== 'function') throw new Error('No fetch implementation is available.');
-  const token = options.token;
-  const base = `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`;
-  const repository = await expectJson(fetchImpl, base, token);
-  const ref = options.ref ?? repository.default_branch;
-  if (!ref) throw Object.assign(new Error('The repository has no default branch.'), { statusCode: 422 });
+  const tree = await fetchCompleteGitHubTree(input, {
+    fetchImpl: options.fetchImpl ?? globalThis.fetch,
+    token: options.token,
+    ref: options.ref,
+    treeConcurrency: options.treeConcurrency
+  });
 
-  const tree = await expectJson(fetchImpl, `${base}/git/trees/${encodeURIComponent(ref)}?recursive=1`, token);
-  const files = (tree.tree ?? [])
+  const files = tree.entries
     .filter((entry) => entry.type === 'blob' && typeof entry.path === 'string')
-    .slice(0, MAX_TREE_FILES)
     .map((entry) => ({
       path: entry.path,
       size: entry.size ?? 0,
+      sha: entry.sha,
       sourceKind: sourceKindForPath(entry.path)
     }));
 
   return {
     repository: {
-      owner: parsed.owner,
-      name: parsed.repo,
-      slug: parsed.slug,
-      url: `https://github.com/${parsed.slug}`,
-      description: repository.description ?? '',
-      defaultBranch: ref,
-      private: Boolean(repository.private)
+      owner: tree.parsed.owner,
+      name: tree.parsed.repo,
+      slug: tree.parsed.slug,
+      url: tree.parsed.url,
+      description: tree.repository.description ?? '',
+      defaultBranch: tree.ref,
+      private: Boolean(tree.repository.private)
     },
-    treeTruncated: Boolean(tree.truncated) || (tree.tree?.length ?? 0) > MAX_TREE_FILES,
+    treeTruncated: false,
+    treeComplete: Boolean(tree.treeComplete),
+    treeFallbackUsed: Boolean(tree.treeFallbackUsed),
     files
   };
 }

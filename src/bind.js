@@ -10,6 +10,7 @@ function stateRank(state) {
 
 export function bindAvglIr(discovery, classificationResult) {
   const grouped = new Map();
+  const evidenceLimit = discovery.scanStrategy === 'full' ? 256 : 48;
 
   for (const claim of classificationResult.classifications) {
     const key = `${claim.semanticClass}:${claim.label}`;
@@ -22,17 +23,19 @@ export function bindAvglIr(discovery, classificationResult) {
         statement: claim.statement,
         evidenceState: claim.evidenceState,
         confidence: claim.confidence,
-        evidence: [...claim.evidence]
+        evidenceCount: claim.evidence.length,
+        evidence: claim.evidence.slice(0, evidenceLimit)
       });
       continue;
     }
 
     existing.confidence = Math.max(existing.confidence, claim.confidence);
+    existing.evidenceCount += claim.evidence.length;
     if (stateRank(claim.evidenceState) > stateRank(existing.evidenceState)) {
       existing.evidenceState = claim.evidenceState;
     }
     for (const evidence of claim.evidence) {
-      if (existing.evidence.length < 12) existing.evidence.push(evidence);
+      if (existing.evidence.length < evidenceLimit) existing.evidence.push(evidence);
     }
   }
 
@@ -48,10 +51,17 @@ export function bindAvglIr(discovery, classificationResult) {
     analysis: {
       pipeline: ['DISCOVER', 'CLASSIFY', 'BIND', 'PROJECT'],
       mode: discovery.analysisMode ?? 'deterministic-static-baseline',
+      scanStrategy: discovery.scanStrategy ?? 'bounded',
       filesSeen: discovery.filesSeen,
       filesEligible: discovery.filesEligible,
+      filesSelected: discovery.filesSelected ?? discovery.filesScanned,
       filesScanned: discovery.filesScanned,
+      bytesScanned: discovery.bytesScanned ?? 0,
       scanComplete: discovery.scanComplete,
+      treeComplete: discovery.treeComplete ?? true,
+      treeFallbackUsed: discovery.treeFallbackUsed ?? false,
+      unsupportedFileCount: discovery.unsupportedFileCount ?? 0,
+      contentFetchFailures: discovery.contentFetchFailures ?? [],
       sourceCoverage: discovery.sourceCoverage,
       skippedSensitive: discovery.skippedSensitive,
       skippedOversize: discovery.skippedOversize,

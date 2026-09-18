@@ -14,13 +14,17 @@ export default async function handler(request, response) {
   if (length > MAX_BODY_BYTES) return response.status(413).json({ error: 'Request body is too large.' });
 
   const repository = typeof request.body?.repository === 'string' ? request.body.repository.trim() : '';
+  const scanStrategy = request.body?.scanStrategy === 'bounded' ? 'bounded' : 'full';
   if (!repository) return response.status(400).json({ error: 'repository is required.' });
 
   try {
     const ir = await analyzeGitHubRepository(repository, {
       token: process.env.GITHUB_TOKEN || undefined,
+      scanStrategy,
       maxFiles: 120,
-      concurrency: 6
+      concurrency: scanStrategy === 'full' ? 12 : 8,
+      batchSize: scanStrategy === 'full' ? 64 : 48,
+      treeConcurrency: 6
     });
     return response.status(200).json({ ir });
   } catch (error) {
