@@ -155,13 +155,15 @@ function renderAssetLibrary(files){
   const search = document.querySelector("#asset-search");
   if(!host) return;
   const groups = new Map();
-  files.forEach(file => {
-    const key = assetCategory(file.name);
-    if(!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(file);
-  });
-  const names = [...groups.keys()];
-  let active = names[0] || "";
+  files
+    .filter(file => assetCategory(file.name) === "Iconography")
+    .forEach(file => {
+      const key = "Iconography";
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(file);
+    });
+  const names = ["Iconography"].filter(name => groups.has(name));
+  let active = "Iconography";
   const draw = () => {
     const q = (search && !search.hidden ? search.value : "").trim().toLowerCase();
     host.replaceChildren();
