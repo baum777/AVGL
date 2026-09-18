@@ -1,0 +1,304 @@
+import { sourceKindForPath } from './discover.js';
+
+const MAX_DETAIL_BYTES = 320 * 1024;
+const MAX_CHAT_FILE_BYTES = 96 * 1024;
+const MAX_TREE_FILES = 5000;
+
+function validPart(value) {
+  return /^[A-Za-z0-9_.-]+$/.test(value) && value !== '.' && value !== '..';
+}
+
+export function parseRepository(input) {
+  const value = String(input ?? '').trim();
+  if (!value) throw Object.assign(new Error('A GitHub repository is required.'), { statusCode: 400 });
+
+  let owner;
+  let repo;
+  if (/^https?:\/\//i.test(value)) {
+    const url = new URL(value);
+    if (!['github.com', 'www.github.com'].includes(url.hostname.toLowerCase())) {
+      throw Object.assign(new Error('Only github.com repository URLs are supported.'), { statusCode: 400 });
+    }
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length !== 2) throw Object.assign(new Error('Use a repository URL such as https://github.com/owner/repo.'), { statusCode: 400 });
+    [owner, repo] = parts;
+  } else {
+    const parts = value.split('/').filter(Boolean);
+    if (parts.length !== 2) throw Object.assign(new Error('Use owner/repo or a github.com repository URL.'), { statusCode: 400 });
+    [owner, repo] = parts;
+  }
+
+  repo = repo.replace(/\.git$/i, '');
+  if (!validPart(owner) || !validPart(repo)) {
+    throw Object.assign(new Error('The GitHub repository identifier is invalid.'), { statusCode: 400 });
+  }
+  return { owner, repo, slug: `${owner}/${repo}` };
+}
+
+function githubHeaders(token) {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'AVGL/0.2'
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+async function expectJson(fetchImpl, url, token) {
+  const response = await fetchImpl(url, { headers: githubHeaders(token) });
+  if (!response.ok) {
+    const error = new Error(
+      response.status === 403 || response.status === 429
+        ? 'GitHub rate limit or access policy blocked the request.'
+        : `GitHub request failed with status ${response.status}.`
+    );
+    error.statusCode = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
+export async function fetchRepositoryInventory(input, options = {}) {
+  const parsed = parseRepository(input);
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') throw new Error('No fetch implementation is available.');
+  const token = options.token;
+  const base = `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`;
+  const repository = await expectJson(fetchImpl, base, token);
+  const ref = options.ref ?? repository.default_branch;
+  if (!ref) throw Object.assign(new Error('The repository has no default branch.'), { statusCode: 422 });
+
+  const tree = await expectJson(fetchImpl, `${base}/git/trees/${encodeURIComponent(ref)}?recursive=1`, token);
+  const files = (tree.tree ?? [])
+    .filter((entry) => entry.type === 'blob' && typeof entry.path === 'string')
+    .slice(0, MAX_TREE_FILES)
+    .map((entry) => ({
+      path: entry.path,
+      size: entry.size ?? 0,
+      sourceKind: sourceKindForPath(entry.path)
+    }));
+
+  return {
+    repository: {
+      owner: parsed.owner,
+      name: parsed.repo,
+      slug: parsed.slug,
+      url: `https://github.com/${parsed.slug}`,
+      description: repository.description ?? '',
+      defaultBranch: ref,
+      private: Boolean(repository.private)
+    },
+    treeTruncated: Boolean(tree.truncated) || (tree.tree?.length ?? 0) > MAX_TREE_FILES,
+    files
+  };
+}
+
+function encodedPath(path) {
+  return String(path).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+}
+
+export async function fetchRepositoryFile(input, filePath, options = {}) {
+  const inventory = options.inventory ?? await fetchRepositoryInventory(input, options);
+  const file = inventory.files.find((candidate) => candidate.path === filePath);
+  if (!file) throw Object.assign(new Error('File not found in repository tree.'), { statusCode: 404 });
+
+  const maxBytes = options.maxBytes ?? MAX_DETAIL_BYTES;
+  if (file.size > maxBytes) {
+    return { ...file, content: null, tooLarge: true, ref: inventory.repository.defaultBranch };
+  }
+
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const parsed = parseRepository(input);
+  const token = options.token;
+  const url = `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}/contents/${encodedPath(filePath)}?ref=${encodeURIComponent(inventory.repository.defaultBranch)}`;
+  const payload = await expectJson(fetchImpl, url, token);
+  if (payload.type !== 'file' || typeof payload.content !== 'string') {
+    throw Object.assign(new Error('GitHub did not return a file payload.'), { statusCode: 422 });
+  }
+  return {
+    ...file,
+    sha: payload.sha,
+    ref: inventory.repository.defaultBranch,
+    content: Buffer.from(payload.content.replace(/\n/g, ''), 'base64').toString('utf8'),
+    tooLarge: false
+  };
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function firstHeading(content) {
+  return content.match(/^#{1,3}\s+(.+)$/m)?.[1]?.trim() ?? null;
+}
+
+function exportedSymbols(content) {
+  const symbols = [];
+  const patterns = [
+    /export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g,
+    /export\s+class\s+([A-Za-z_$][\w$]*)/g,
+    /export\s+const\s+([A-Za-z_$][\w$]*)/g,
+    /module\.exports\s*=\s*\{([^}]+)\}/g
+  ];
+  for (const pattern of patterns) {
+    for (const match of content.matchAll(pattern)) {
+      if (match[1]?.includes(',')) symbols.push(...match[1].split(',').map((part) => part.trim().split(':')[0]));
+      else symbols.push(match[1]);
+      if (symbols.length >= 12) break;
+    }
+  }
+  return unique(symbols).slice(0, 12);
+}
+
+function codeSymbols(content) {
+  const values = [...exportedSymbols(content)];
+  for (const match of content.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) values.push(match[1]);
+  for (const match of content.matchAll(/class\s+([A-Za-z_$][\w$]*)\s*/g)) values.push(match[1]);
+  return unique(values).slice(0, 12);
+}
+
+function semanticSignals(content) {
+  const rules = [
+    ['WHO', /\b(agent|assistant|worker|role|harness|systemPrompt|instructions)\b/i],
+    ['KNOW', /\b(context|memory|retrieval|rag|knowledge|resource|state)\b/i],
+    ['THINK', /\b(model|llm|reasoning|planner|planning|handoff|subagent|routing)\b/i],
+    ['CAN', /\b(tool|mcp|adapter|connector|browser|filesystem|shell|api)\b/i],
+    ['MAY', /\b(permission|approval|authorize|policy|grant|scope|deny|allow)\b/i],
+    ['ACT', /\b(execute|dispatch|send|write|commit|push|deploy|mutation|fetch\()\b/i],
+    ['DID', /\b(receipt|audit|verify|validation|evidence|trace|observability|outcome)\b/i]
+  ];
+  return rules.filter(([, pattern]) => pattern.test(content)).map(([name]) => name);
+}
+
+function roleForPath(path) {
+  const lower = path.toLowerCase();
+  const table = [
+    [/^api\//, ['Server API endpoint', 'Server-API-Endpunkt']],
+    [/^web\//, ['Browser interface', 'Browser-Oberfläche']],
+    [/^runtime\/permissions\//, ['Runtime permission enforcement', 'Runtime-Berechtigungsdurchsetzung']],
+    [/^runtime\/auth\//, ['Runtime identity and claim binding', 'Runtime-Identitäts- und Claim-Bindung']],
+    [/^runtime\/observability\//, ['Runtime evidence and observability', 'Runtime-Evidence und Observability']],
+    [/^runtime\//, ['Runtime implementation', 'Runtime-Implementierung']],
+    [/(^|\/)tests?\//, ['Automated test', 'Automatisierter Test']],
+    [/(^|\/)docs?\//, ['Documentation', 'Dokumentation']],
+    [/(^|\/)contracts?\//, ['Contract or configuration surface', 'Contract- oder Konfigurationsfläche']],
+    [/(^|\/)schema\//, ['Schema definition', 'Schema-Definition']],
+    [/(^|\/)scripts?\//, ['Repository tooling', 'Repository-Tooling']],
+    [/(^|\/)\.github\//, ['CI / repository automation', 'CI- / Repository-Automation']],
+    [/(^|\/)(\.agents|\.claude)\//, ['Agent instructions / skill surface', 'Agent-Instruktions- / Skill-Fläche']]
+  ];
+  return table.find(([pattern]) => pattern.test(lower))?.[1] ?? ['Repository file', 'Repository-Datei'];
+}
+
+function effectForSignals(signals, locale) {
+  const de = locale === 'de';
+  const pieces = [];
+  if (signals.includes('MAY')) pieces.push(de ? 'steuert Authority, Permissions oder Freigaben' : 'controls authority, permissions, or approvals');
+  if (signals.includes('ACT')) pieces.push(de ? 'enthält potenzielle Effect-/Execution-Pfade' : 'contains potential effect or execution paths');
+  if (signals.includes('DID')) pieces.push(de ? 'erzeugt oder prüft Evidence / Verifikation' : 'emits or verifies evidence');
+  if (signals.includes('CAN')) pieces.push(de ? 'beschreibt oder implementiert Tool-/Capability-Zugriff' : 'describes or implements tool/capability access');
+  if (signals.includes('KNOW')) pieces.push(de ? 'arbeitet mit Context, State oder Memory' : 'works with context, state, or memory');
+  if (signals.includes('THINK')) pieces.push(de ? 'enthält Model-, Planning- oder Reasoning-Signale' : 'contains model, planning, or reasoning signals');
+  if (signals.includes('WHO')) pieces.push(de ? 'definiert Agent-, Role- oder Harness-Struktur' : 'defines agent, role, or harness structure');
+  return pieces.slice(0, 3).join(de ? '; ' : '; ');
+}
+
+export function summarizeRepositoryFile(file) {
+  const path = file.path;
+  const content = file.content ?? '';
+  const role = roleForPath(path);
+  const sourceKind = file.sourceKind ?? sourceKindForPath(path);
+  const signals = content ? semanticSignals(content) : [];
+  const symbols = content ? codeSymbols(content) : [];
+  const heading = content ? firstHeading(content) : null;
+  let jsonMeta = null;
+  if (content && /\.json$/i.test(path)) {
+    try {
+      const parsed = JSON.parse(content);
+      jsonMeta = {
+        title: typeof parsed.title === 'string' ? parsed.title : null,
+        description: typeof parsed.description === 'string' ? parsed.description : null,
+        schemaVersion: parsed.schemaVersion ?? parsed.version ?? null,
+        keys: Object.keys(parsed).slice(0, 12)
+      };
+    } catch {
+      jsonMeta = null;
+    }
+  }
+
+  const name = path.split('/').pop();
+  const subject = jsonMeta?.title || heading || name;
+  const effectEn = effectForSignals(signals, 'en');
+  const effectDe = effectForSignals(signals, 'de');
+  const symbolEn = symbols.length ? ` Exposes or defines: ${symbols.slice(0, 6).join(', ')}.` : '';
+  const symbolDe = symbols.length ? ` Definiert bzw. exportiert: ${symbols.slice(0, 6).join(', ')}.` : '';
+  const jsonEn = jsonMeta?.description ? ` Declared purpose: ${jsonMeta.description}` : '';
+  const jsonDe = jsonMeta?.description ? ` Enthält eine deklarierte Beschreibung im Source: ${jsonMeta.description}` : '';
+
+  return {
+    path,
+    size: file.size ?? Buffer.byteLength(content, 'utf8'),
+    sourceKind,
+    role: { en: role[0], de: role[1] },
+    subject,
+    summary: {
+      en: `${role[0]} “${subject}”.${symbolEn}${effectEn ? ` Functionally, it ${effectEn}.` : ''}${jsonEn}`.trim(),
+      de: `${role[1]} „${subject}“.${symbolDe}${effectDe ? ` Funktional ${effectDe}.` : ''}${jsonDe}`.trim()
+    },
+    semanticClasses: signals,
+    symbols,
+    lineCount: content ? content.split(/\r?\n/).length : null,
+    jsonMeta,
+    excerpt: content ? content.slice(0, 12000) : '',
+    tooLarge: Boolean(file.tooLarge)
+  };
+}
+
+function tokenize(value) {
+  return unique(String(value ?? '').toLowerCase().match(/[a-z0-9_.-]{3,}/g) ?? []);
+}
+
+export function rankRelevantFiles(files, question, options = {}) {
+  const terms = tokenize(question);
+  const activeFile = options.activeFile ?? null;
+  const evidencePaths = new Set(options.evidencePaths ?? []);
+  const preferred = ['readme.md', 'package.json', 'agents.md', 'src/index.js', 'runtime/cli/runtime-dry-run.mjs'];
+
+  return files
+    .map((file) => {
+      const lower = file.path.toLowerCase();
+      let score = 0;
+      if (file.path === activeFile) score += 1000;
+      if (evidencePaths.has(file.path)) score += 40;
+      for (const term of terms) {
+        if (lower.includes(term)) score += 12;
+        if (lower.split('/').pop()?.includes(term)) score += 8;
+      }
+      const preferredIndex = preferred.indexOf(lower);
+      if (preferredIndex >= 0) score += 8 - preferredIndex;
+      if (file.sourceKind === 'implementation') score += 2;
+      if (file.sourceKind === 'config') score += 1;
+      return { ...file, score };
+    })
+    .filter((file) => file.score > 0)
+    .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+}
+
+export async function fetchChatContextFiles(input, question, options = {}) {
+  const inventory = options.inventory ?? await fetchRepositoryInventory(input, options);
+  const ranked = rankRelevantFiles(inventory.files, question, options);
+  const fallback = inventory.files
+    .filter((file) => ['README.md', 'AGENTS.md', 'package.json'].includes(file.path))
+    .map((file) => ({ ...file, score: 1 }));
+  const candidates = unique([...ranked, ...fallback].map((item) => item.path)).slice(0, 6);
+  const results = [];
+  for (const path of candidates) {
+    try {
+      const file = await fetchRepositoryFile(input, path, { ...options, inventory, maxBytes: MAX_CHAT_FILE_BYTES });
+      if (file.content) results.push({ path, content: file.content.slice(0, 16000), sourceKind: file.sourceKind });
+    } catch {
+      // Bounded assistant context: one unreadable file must not fail the full chat request.
+    }
+  }
+  return { inventory, files: results };
+}

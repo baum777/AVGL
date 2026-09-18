@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/analyze.mjs": {
-      "maxDuration": 30
-    }
+    "api/analyze.mjs": { "maxDuration": 30 },
+    "api/repository.mjs": { "maxDuration": 20 },
+    "api/file.mjs": { "maxDuration": 20 },
+    "api/chat.mjs": { "maxDuration": 45 }
   },
   "rewrites": [
     { "source": "/", "destination": "/web/index.html" },
