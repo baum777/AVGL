@@ -10,8 +10,10 @@
 <body>
   <header class="site-header">
     <a class="brand" href="/" aria-label="AVGL home">
-      <span class="brand-mark" aria-hidden="true"><img src="/assets/avgl-mark.svg" alt="" width="24" height="24"></span>
-      <span>AVGL</span>
+      <picture class="brand-lockup" aria-hidden="true">
+        <source media="(prefers-color-scheme: dark)" srcset="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F01_logos%2Fsvg%2Favgl-primary-horizontal-light.svg">
+        <img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F01_logos%2Fsvg%2Favgl-primary-horizontal.svg" alt="" width="160" height="42">
+      </picture>
     </a>
     <div class="header-actions">
       <div class="header-meta"><span class="status-dot" aria-hidden="true"></span><span>v0.5 · evidence-bound</span></div>
@@ -23,9 +25,21 @@
 
   <main>
     <section class="hero" aria-labelledby="hero-title">
-      <p class="eyebrow">Agent Visual Grammar Language</p>
+      <div class="hero-brandline">
+        <p class="eyebrow">Agent Visual Grammar Language</p>
+        <p class="hero-brand-idea">One model. Many lenses.</p>
+      </div>
       <h1 id="hero-title"><span data-i18n="heroLine1">Understand the agent.</span><br><span class="muted-headline" data-i18n="heroLine2">Not the graph.</span></h1>
       <p class="hero-copy" data-i18n="heroCopy">Analyze public repositories directly or connect GitHub for user-scoped private repositories. AVGL maps evidence into readable system stories, repository relations, and cross-repository workspaces.</p>
+      <div class="lens-ribbon" aria-label="AVGL lenses">
+        <span><img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-structure.svg" alt="">Structure</span>
+        <span><img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-agentic.svg" alt="">Agentic</span>
+        <span><img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-context.svg" alt="">Context</span>
+        <span><img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-inheritance.svg" alt="">Inheritance</span>
+        <span><img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-propagation.svg" alt="">Propagation</span>
+        <span><img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-effective.svg" alt="">Effective</span>
+        <span><img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-evidence.svg" alt="">Evidence</span>
+      </div>
 
       <form id="analyze-form" class="repo-form">
         <label for="repository" data-i18n="repoLabel">GitHub repository</label>
@@ -123,7 +137,8 @@
           </aside>
           <section class="file-detail-panel" aria-live="polite">
             <div id="file-empty" class="file-empty">
-              <div class="file-empty-icon">↳</div>
+              <img class="file-empty-illustration" src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F05_ui_assets%2Fempty_states%2Favgl-empty-no-file.svg" alt="">
+              <div class="file-empty-icon" aria-hidden="true">↳</div>
               <strong data-i18n="selectFile">Select a file</strong>
               <span data-i18n="selectFileHint">AVGL will explain what it contains, what role it plays, and which semantic areas it touches.</span>
             </div>
@@ -160,17 +175,57 @@
       <div id="system-view" class="view-panel" hidden></div>
     </section>
 
+    <section class="brand-principles" aria-label="AVGL brand principles">
+      <div>
+        <img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Fcore%2Favgl-transformation.svg" alt="">
+        <span>Structure = effect</span>
+      </div>
+      <div>
+        <img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-structure.svg" alt="">
+        <span>One model. Many lenses.</span>
+      </div>
+      <div>
+        <img src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Fstates%2Favgl-unknown.svg" alt="">
+        <span>Unknown stays unknown.</span>
+      </div>
+    </section>
+
     <section class="principle-strip" aria-label="AVGL principles">
       <div><strong>CAN ≠ MAY</strong><span data-i18n="principleCanMay">Technical reach is not permission.</span></div>
       <div><strong>ACT ≠ DID</strong><span data-i18n="principleActDid">An effect path is not a verified result.</span></div>
       <div><strong>UNKNOWN stays UNKNOWN</strong><span data-i18n="principleUnknown">Missing evidence is never filled with a guess.</span></div>
     </section>
+
+    <details class="brand-system">
+      <summary>
+        <span>
+          <strong>AVGL Brand System</strong>
+          <small><span id="brand-asset-count">115</span> packaged assets · logos · icons · states · UI · social · guidelines</small>
+        </span>
+        <span class="brand-system-action">Explore assets</span>
+      </summary>
+      <div class="brand-system-intro">
+        <div>
+          <p class="eyebrow">Layered Projection · Brand System v1.0</p>
+          <h2>One model. Many lenses.</h2>
+          <p>The complete asset package is exposed here without turning the product surface into an asset wall. Production UI uses the primary lockup, lens iconography, states, patterns and empty-state illustrations directly.</p>
+        </div>
+        <div class="brand-system-links">
+          <a href="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F08_guidelines%2FAVGL_BRAND_GUIDELINES.pdf" target="_blank" rel="noopener">Brand guidelines PDF</a>
+          <a href="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F08_guidelines%2FAVGL_BRAND_GUIDELINES.md" target="_blank" rel="noopener">Guidelines source</a>
+          <a href="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F07_mockups_reference%2FAVGL_concept_2_layered_projection_reference.png" target="_blank" rel="noopener">Concept reference</a>
+        </div>
+      </div>
+      <div id="brand-asset-library" class="brand-asset-library" aria-live="polite">
+        <p class="relation-empty">Loading packaged assets…</p>
+      </div>
+    </details>
   </main>
 
   <footer><span>AVGL v0.5</span><span>DISCOVER → EXTRACT → CLASSIFY → BIND → RESOLVE RELATIONS → TRACE EFFECTS → SYNTHESIZE → PROJECT</span></footer>
 
   <button id="assistant-fab" class="assistant-fab" type="button" aria-haspopup="dialog" aria-controls="assistant-panel">
-    <span class="assistant-fab-icon">✦</span><span data-i18n="askAvgl">Ask AVGL</span>
+    <img class="assistant-fab-icon" src="/api/asset-extract?raw=1&amp;path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Fui%2Favgl-assistant.svg" alt=""><span data-i18n="askAvgl">Ask AVGL</span>
   </button>
 
   <section id="assistant-panel" class="assistant-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-title" hidden>
@@ -192,5 +247,6 @@
   </section>
 
   <script type="module" src="/app.js"></script>
+  <script type="module" src="/brand-assets.js"></script>
 </body>
 </html>
