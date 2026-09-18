@@ -173,3 +173,40 @@ const params=new URLSearchParams(location.search);
 if(params.get("github")==="connected"){history.replaceState({},document.title,location.pathname);refreshGitHubSession().then(ok=>{if(ok)setSourceMode("github_app")})}else{refreshGitHubSession()}
 
 setScanStrategy("full");setSourceMode("public");applyLocale();renderSuggestions();renderWorkspaceSelected();updateAssistantContext();
+
+// Brand asset library — materialized from the canonical ZIP at build time.
+const BRAND_ASSET_PREFIX="AVGL_FULL_ASSET_PACKAGE/";
+const BRAND_STATIC_ROOT="/assets/brand/";
+const assetLibrary=$("#asset-library");
+let assetLibraryLoaded=false;
+function brandAssetUrl(path){
+  let relative=String(path||"").replace(BRAND_ASSET_PREFIX,"");
+  while(relative.startsWith("/")) relative=relative.slice(1);
+  return BRAND_STATIC_ROOT+relative.split("/").map(encodeURIComponent).join("/");
+}
+function assetCard(file){
+  const relative=String(file.name||"").replace(BRAND_ASSET_PREFIX,"");
+  const ext=(relative.split(".").pop()||"").toLowerCase();
+  const renderable=["svg","png","ico"].includes(ext);
+  const a=el("a","asset-card");a.href=brandAssetUrl(relative);a.target="_blank";a.rel="noopener noreferrer";a.title=relative;
+  const preview=el("div","asset-preview"+(renderable?"":" asset-doc"));
+  if(renderable){const img=document.createElement("img");img.src=brandAssetUrl(relative);img.alt="";img.loading="lazy";img.decoding="async";preview.append(img)}
+  else preview.textContent=ext?ext.toUpperCase():"FILE";
+  a.append(preview,el("div","asset-name",relative.split("/").pop()||relative),el("div","asset-path",relative));
+  return a;
+}
+async function loadAssetLibrary(){
+  if(assetLibraryLoaded||!assetLibrary)return;
+  assetLibraryLoaded=true;
+  const host=$("#asset-library-grid"),count=$("#asset-count");
+  host.replaceChildren(el("p","relation-empty","Loading bundled assets…"));
+  try{
+    const r=await fetch(BRAND_STATIC_ROOT+"manifest.json"),manifest=await r.json();
+    if(!r.ok)throw Error("Asset manifest unavailable");
+    const files=[...(manifest.files||[]).map(file=>({name:BRAND_ASSET_PREFIX+file.path})),{name:BRAND_ASSET_PREFIX+"manifest.json"},{name:BRAND_ASSET_PREFIX+"manifest.txt"}];
+    count.textContent=files.length+" bundled assets";
+    host.replaceChildren();
+    files.forEach(file=>host.append(assetCard(file)));
+  }catch(error){host.replaceChildren(el("div","asset-error",error.message));assetLibraryLoaded=false}
+}
+if(assetLibrary)assetLibrary.addEventListener("toggle",()=>{if(assetLibrary.open)loadAssetLibrary()});
