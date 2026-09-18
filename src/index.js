@@ -17,7 +17,12 @@ export { synthesizeAvglIr } from './synthesize.js';
 export { sanitizeIrForTransport, assertTransportSafeIr } from './privacy.js';
 export { createWorkspaceIr, workspaceSummary } from './workspace.js';
 export { resolveGitHubRevision } from './github-tree.js';
-export { createGitHubAppJwt, mintInstallationToken, listInstallationRepositories } from './github-app-auth.js';
+export {
+  createGitHubAppJwt,
+  mintInstallationToken,
+  listUserInstallationRepositories,
+  verifyUserInstallationAccess
+} from './github-app-auth.js';
 export { extractRelationFacts, resolveRelations, traceEffectChains, buildRelationModel } from './relations.js';
 export { discoverGitHubRepository, parseGitHubRepository, selectGitHubCandidates };
 export { projectStory, projectHarnessCard, projectJson } from './project.js';
