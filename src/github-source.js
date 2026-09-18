@@ -4,6 +4,10 @@ import { classifyDiscoveries } from './classify.js';
 import { bindAvglIr } from './bind.js';
 import { fetchCompleteGitHubTree, githubHeaders, parseGitHubRepository } from './github-tree.js';
 import { extractRelationFacts, resolveRelations, traceEffectChains } from './relations.js';
+import {
+  createSemanticResolutionSummary,
+  mergeSemanticResolutionSummaries
+} from './semantic-resolution.js';
 
 const DEFAULT_MAX_FILES = 120;
 const DEFAULT_CONCURRENCY = 10;
@@ -154,6 +158,8 @@ export async function discoverGitHubRepository(input, options = {}) {
     : selectGitHubCandidates(eligible, maxFiles);
 
   const observations = [];
+  const semanticResolution = createSemanticResolutionSummary();
+  const semanticRejections = [];
   const sourceCoverage = emptyCoverage();
   const contentFetchFailures = [];
   const relationFacts = [];
@@ -191,6 +197,10 @@ export async function discoverGitHubRepository(input, options = {}) {
 
     filesScanned += batchDiscovery.filesScanned;
     observations.push(...batchDiscovery.observations);
+    mergeSemanticResolutionSummaries(semanticResolution, batchDiscovery.semanticResolution);
+    if (semanticRejections.length < 256) {
+      semanticRejections.push(...(batchDiscovery.semanticRejections ?? []).slice(0, 256 - semanticRejections.length));
+    }
     relationFacts.push(...loaded.map(extractRelationFacts));
     mergeCoverage(sourceCoverage, batchDiscovery.sourceCoverage);
   }
@@ -222,6 +232,8 @@ export async function discoverGitHubRepository(input, options = {}) {
     skippedOversize: oversize.map((file) => file.path),
     contentFetchFailures,
     analysisMode,
+    semanticResolution,
+    semanticRejections,
     observations,
     relations: resolvedRelations.relations,
     effects: resolvedRelations.effects,

@@ -49,7 +49,7 @@ export function bindAvglIr(discovery, classificationResult) {
     generatedAt: discovery.generatedAt,
     source: discovery.source,
     analysis: {
-      pipeline: ['DISCOVER', 'CLASSIFY', 'BIND', 'PROJECT'],
+      pipeline: ['DISCOVER', 'RESOLVE_SEMANTICS', 'CLASSIFY', 'BIND', 'PROJECT'],
       mode: discovery.analysisMode ?? 'deterministic-static-baseline',
       scanStrategy: discovery.scanStrategy ?? 'bounded',
       filesSeen: discovery.filesSeen,
@@ -66,6 +66,8 @@ export function bindAvglIr(discovery, classificationResult) {
       skippedSensitive: discovery.skippedSensitive,
       skippedOversize: discovery.skippedOversize,
       rejectedWeakEvidence: classificationResult.rejectedWeakEvidence.length,
+      semanticResolution: discovery.semanticResolution ?? null,
+      rejectedSemanticCandidates: discovery.semanticResolution?.rejected ?? 0,
       relationCount: discovery.relations?.length ?? 0,
       effectCount: discovery.effects?.length ?? 0,
       effectChainCount: discovery.effectChains?.length ?? 0

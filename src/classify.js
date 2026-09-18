@@ -49,7 +49,8 @@ export function classifyDiscoveries(discovery) {
         line: observation.line,
         snippet: observation.snippet,
         detector: observation.detectorId,
-        sourceKind: observation.sourceKind
+        sourceKind: observation.sourceKind,
+        semanticResolution: observation.semanticResolution
       }]
     });
   }

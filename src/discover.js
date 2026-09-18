@@ -7,6 +7,11 @@ import {
   TEXT_FILENAMES
 } from './constants.js';
 import { DETECTORS } from './detectors.js';
+import {
+  createSemanticResolutionSummary,
+  recordSemanticResolution,
+  resolveSemanticCandidate
+} from './semantic-resolution.js';
 
 const CODE_EXTENSIONS = new Set([
   '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.py', '.go', '.rs', '.java',
@@ -64,12 +69,39 @@ function snippet(line) {
   return line.trim().replace(/\s+/g, ' ').slice(0, 180);
 }
 
-function scanContent(path, content, observations, sourceKind) {
+function scanContent(path, content, observations, sourceKind, semanticResolution, semanticRejections) {
   const lines = content.split(/\r?\n/);
   for (const detector of DETECTORS) {
     let hits = 0;
     for (let index = 0; index < lines.length && hits < 3; index += 1) {
       if (!detector.patterns.some((pattern) => pattern.test(lines[index]))) continue;
+
+      const resolution = resolveSemanticCandidate({
+        detector,
+        path,
+        line: lines[index],
+        lines,
+        lineIndex: index,
+        sourceKind
+      });
+      recordSemanticResolution(semanticResolution, resolution);
+
+      if (!resolution.accepted) {
+        if (semanticRejections.length < 256) {
+          semanticRejections.push({
+            detectorId: detector.id,
+            candidateClass: detector.semanticClass,
+            path,
+            line: index + 1,
+            sourceKind,
+            resolver: resolution.resolver,
+            rule: resolution.rule,
+            reason: resolution.reason
+          });
+        }
+        continue;
+      }
+
       observations.push({
         detectorId: detector.id,
         candidateClass: detector.semanticClass,
@@ -79,7 +111,13 @@ function scanContent(path, content, observations, sourceKind) {
         snippet: snippet(lines[index]),
         confidence: detector.confidence,
         evidenceState: detector.evidenceState,
-        sourceKind
+        sourceKind,
+        semanticResolution: {
+          mode: resolution.mode,
+          resolver: resolution.resolver,
+          rule: resolution.rule,
+          reason: resolution.reason
+        }
       });
       hits += 1;
     }
@@ -89,6 +127,8 @@ function scanContent(path, content, observations, sourceKind) {
 export function discoverFiles(files, source = { kind: 'repository', label: 'repository' }, options = {}) {
   const maxFileBytes = options.maxFileBytes ?? MAX_FILE_BYTES;
   const observations = [];
+  const semanticResolution = createSemanticResolutionSummary();
+  const semanticRejections = [];
   const skippedSensitive = [];
   const skippedOversize = [];
   const sourceCoverage = {
@@ -126,7 +166,7 @@ export function discoverFiles(files, source = { kind: 'repository', label: 'repo
     const sourceKind = file.sourceKind ?? sourceKindForPath(path);
     filesScanned += 1;
     sourceCoverage[sourceKind] = (sourceCoverage[sourceKind] ?? 0) + 1;
-    scanContent(path, content, observations, sourceKind);
+    scanContent(path, content, observations, sourceKind, semanticResolution, semanticRejections);
   }
 
   return {
@@ -143,6 +183,8 @@ export function discoverFiles(files, source = { kind: 'repository', label: 'repo
     skippedSensitive,
     skippedOversize,
     analysisMode: options.analysisMode,
+    semanticResolution,
+    semanticRejections,
     observations
   };
 }

@@ -125,7 +125,7 @@ export function synthesizeAvglIr(ir) {
   const areas = Object.fromEntries(SEMANTIC_CLASSES.map((semanticClass) => [semanticClass, synthesizeArea(ir, semanticClass)]));
   return {
     ...ir,
-    analysis: { ...ir.analysis, pipeline: ['DISCOVER', 'EXTRACT', 'CLASSIFY', 'BIND', 'RESOLVE_RELATIONS', 'TRACE_EFFECTS', 'SYNTHESIZE', 'PROJECT'] },
+    analysis: { ...ir.analysis, pipeline: ['DISCOVER', 'EXTRACT', 'RESOLVE_SEMANTICS', 'CLASSIFY', 'BIND', 'RESOLVE_RELATIONS', 'TRACE_EFFECTS', 'SYNTHESIZE', 'PROJECT'] },
     synthesis: {
       version: '0.1',
       mode: 'deterministic-evidence-aggregation',
