@@ -114,3 +114,9 @@
 
 .lens-description{margin:-10px 0 18px;color:var(--muted);font-size:12px;line-height:1.5}
 .view-tab.active{box-shadow:inset 0 -2px 0 var(--accent)}
+
+.capability-lens:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through;text-decoration-thickness:1px}
+.derived-lens-head{margin:4px 0 16px}
+.derived-lens-head .eyebrow{margin-bottom:5px}
+.derived-lens-copy{margin:0;max-width:760px;color:var(--muted);font-size:13px;line-height:1.55}
+.derived-lens-list{display:grid;gap:8px}

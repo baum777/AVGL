@@ -121,6 +121,9 @@
         <button type="button" class="view-tab active" data-view="structure" aria-selected="true" data-i18n="tabFiles">Structure</button>
         <button type="button" class="view-tab" data-view="evidence" aria-selected="false" data-i18n="tabInspect">Evidence</button>
         <button type="button" class="view-tab" data-view="agentic" aria-selected="false" data-i18n="tabSystem">Agentic</button>
+        <button type="button" class="view-tab capability-lens" data-view="inheritance" data-requires="inheritance" aria-selected="false" data-i18n="inheritance" disabled>Inheritance</button>
+        <button type="button" class="view-tab capability-lens" data-view="propagation" data-requires="propagation" aria-selected="false" data-i18n="propagation" disabled>Propagation</button>
+        <button type="button" class="view-tab capability-lens" data-view="effective" data-requires="effective" aria-selected="false" data-i18n="effective" disabled>Effective</button>
       </nav>
       <p id="lens-description" class="lens-description">What exists and where? Follow the selected object through source-backed structure.</p>
 
@@ -159,6 +162,9 @@
 
       <div id="evidence-view" class="view-panel" hidden></div>
       <div id="agentic-view" class="view-panel" hidden></div>
+      <div id="inheritance-view" class="view-panel" hidden></div>
+      <div id="propagation-view" class="view-panel" hidden></div>
+      <div id="effective-view" class="view-panel" hidden></div>
         </section>
 
         <aside class="context-sidebar" aria-label="Selection context">
