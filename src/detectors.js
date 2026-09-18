@@ -1,3 +1,4 @@
+// Detectors generate lexical candidates only. Semantic acceptance/rejection belongs in semantic-resolution.js.
 export const DETECTORS = Object.freeze([
   {
     id: 'who.agent-definition',
