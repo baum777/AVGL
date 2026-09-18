@@ -214,7 +214,7 @@ function resolveWhoActor({ path, line, lines, lineIndex }) {
 const THINK_NEGATIVE_PATTERNS = Object.freeze([
   {
     rule: 'data-or-orm-model',
-    pattern: /\b(?:mongoose\.model|sequelize\.define|database\.models?|db\.models?|ViewModel|DataModel|DomainModel|model\s+\w+\s*\{|data\s+model|domain\s+model|database\s+model|schema\s+model|3d\s+model|model\s+(?:number|year))\b/i,
+    pattern: /(?:\bmongoose\.model\b|\bsequelize\.define\b|\bdatabase\.models?\b|\bdb\.models?\b|\bViewModel\b|\bDataModel\b|\bDomainModel\b|\bmodel\s+\w+\s*\{|\bdata\s+model\b|\bdomain\s+model\b|\bdatabase\s+model\b|\bschema\s+model\b|\b3d\s+model\b|\bmodel\s+(?:number|year)\b)/i,
     reason: 'A data, ORM, UI, schema, physical, or product model is not evidence of LLM cognition.'
   },
   {
@@ -247,6 +247,7 @@ const THINK_MODEL_CONFIG_PATTERN = /\bmodel\s*[:=]\s*["'\x60][^"'\x60]*(?:gpt|o[
 const THINK_REASONING_CONFIG_PATTERN = /\b(?:reasoning(?:Effort)?|reasoning_effort|thinkingBudget|thinking_budget)\s*[:=]/i;
 const THINK_ORCHESTRATION_PATTERN = /\b(?:planner|planning|replan|reasoning|subagent|sub-agent|handoff|delegate|delegation)\b/i;
 const THINK_AGENTIC_SUPPORT_PATTERN = /\b(agent|assistant|orchestrator|workflow|task|prompt|model|llm|tool|context|memory|executor|runtime|messages?)\b/i;
+const THINK_MODEL_SUPPORT_PATTERN = /\b(agent|assistant|orchestrator|workflow|task|prompt|llm|tool|context|memory|executor|runtime|messages?)\b/i;
 const THINK_PATH_PATTERN = /(?:^|[\/_.-])(agents?|assistant|planner|planning|reasoning|orchestrator|runtime|workflow|model|llm|subagents?)(?:[\/_.-]|$)/i;
 
 function resolveThinkCognition({ path, line, lines, lineIndex, sourceKind }) {
@@ -311,7 +312,7 @@ function resolveThinkCognition({ path, line, lines, lineIndex, sourceKind }) {
   }
 
   if (/\b(?:openai|anthropic|gemini|llm|model)\b/i.test(current)) {
-    if (THINK_AGENTIC_SUPPORT_PATTERN.test(surrounding) && THINK_PATH_PATTERN.test(pathText)) {
+    if (THINK_MODEL_SUPPORT_PATTERN.test(surrounding) && THINK_PATH_PATTERN.test(pathText)) {
       return accepted(
         'think.cognition.v1',
         'supported-model-reference',
