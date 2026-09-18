@@ -1,4 +1,5 @@
 import { analyzeGitHubRepository } from '../src/index.js';
+import { resolveGitHubAccess } from '../src/github-app-auth.js';
 
 const MAX_BODY_BYTES = 8 * 1024;
 
@@ -18,17 +19,23 @@ export default async function handler(request, response) {
   if (!repository) return response.status(400).json({ error: 'repository is required.' });
 
   try {
+    const access = await resolveGitHubAccess(request, request.body);
     const ir = await analyzeGitHubRepository(repository, {
-      token: process.env.GITHUB_TOKEN || undefined,
+      token: access.token,
       scanStrategy,
       maxFiles: 120,
       concurrency: scanStrategy === 'full' ? 12 : 8,
       batchSize: scanStrategy === 'full' ? 64 : 48,
       treeConcurrency: 6
     });
+    ir.sourceAccess = {
+      mode: access.mode,
+      installationId: access.installationId,
+      tokenExpiresAt: access.expiresAt ?? null
+    };
     return response.status(200).json({ ir });
   } catch (error) {
-    const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 500
+    const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 600
       ? error.statusCode
       : 422;
     return response.status(status).json({ error: error?.message || 'Repository analysis failed.' });

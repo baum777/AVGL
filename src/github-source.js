@@ -189,7 +189,7 @@ export async function discoverGitHubRepository(input, options = {}) {
     : (scanComplete ? 'github-static-baseline' : 'github-static-baseline-partial');
 
   return {
-    source: { kind: 'repository', label: tree.parsed.slug },
+    source: { kind: 'repository', label: tree.parsed.slug, revision: tree.ref, private: Boolean(tree.repository.private) },
     generatedAt: new Date().toISOString(),
     filesSeen: blobs.length,
     filesEligible: eligible.length,

@@ -26,7 +26,7 @@ WHO → KNOW → THINK → CAN → MAY → ACT → DID
 ## Compiler pipeline
 
 ```text
-DISCOVER → CLASSIFY → BIND → PROJECT
+DISCOVER → EXTRACT → CLASSIFY → BIND → RESOLVE_RELATIONS → TRACE_EFFECTS → SYNTHESIZE → PROJECT
 ```
 
 ## Change expectations
@@ -37,3 +37,20 @@ DISCOVER → CLASSIFY → BIND → PROJECT
 - Preserve explicit `unknowns` in the IR.
 - Keep the generic scanner dependency-light and runnable locally.
 - Framework-specific behavior belongs behind adapters rather than hard-coded into the generic semantic kernel.
+
+
+## Private source invariants
+
+- GitHub App installation tokens are server-side only and short-lived.
+- Private-repository analysis must fail closed when installation authority is absent or expired.
+- Do not send GitHub App private-repository source/context to a remote model provider by default.
+- `LOCAL_PRIVATE` transport IR must contain no raw source, `snippet`, `content`, or `excerpt` fields.
+- Claims of "zero knowledge" are prohibited unless the cloud never receives plaintext source; GitHub App cloud analysis is least-privilege/zero-retention-oriented, not cryptographic zero knowledge.
+
+## Workspace invariants
+
+- Cross-repository analysis must bind each repository to an immutable revision.
+- `EXPLICIT`, `INFERRED`, and `DERIVED` cross-repo relations remain distinct.
+- A repository dependency does not prove invocation.
+- Cross-repo reachability does not prove execution.
+- Derived effect chains must state their derivation and uncertainty.

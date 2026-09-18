@@ -49,6 +49,13 @@ export default async function handler(request, response) {
   if (Number(request.headers['content-length'] ?? 0) > MAX_BODY_BYTES) {
     return response.status(413).json({ error: 'Request body is too large.' });
   }
+
+  if (request.body?.accessMode === 'github_app' || request.body?.context?.sourceAccess?.mode === 'github_app') {
+    return response.status(403).json({
+      error: 'Remote provider chat is disabled for GitHub App private-repository context. Use LOCAL_PRIVATE or an explicitly approved inference policy.'
+    });
+  }
+
   if (!process.env.OPENROUTER_API_KEY) {
     return response.status(503).json({ error: 'OpenRouter is not configured on this deployment.' });
   }
@@ -68,7 +75,7 @@ export default async function handler(request, response) {
     });
     const compact = compactAvglContext(context);
     const tree = repoContext.inventory.files.map((file) => file.path).slice(0, 900);
-    const fileContext = repoContext.files.map((file) => `FILE: ${file.path}\nSOURCE_KIND: ${file.sourceKind}\n---\n${file.content}`).join('\n\n');
+    const fileContext = repoContext.files.map((file) => 'FILE: ' + file.path + '\nSOURCE_KIND: ' + file.sourceKind + '\n---\n' + file.content).join('\n\n');
     const languageRule = locale === 'de'
       ? 'Antworte auf Deutsch. Behalte etablierte technische Begriffe wie API, Runtime, Agent, Tool, Model, Prompt, Context, MCP, Git, Repository, Workflow und Evidence auf Englisch, wenn eine Übersetzung unnatürlich wäre.'
       : 'Answer in English.';
@@ -82,17 +89,17 @@ export default async function handler(request, response) {
       'When making a concrete repository claim, mention the supporting file path inline when available.',
       'If the available context is insufficient, say what is unknown instead of guessing.',
       'Do not claim that a config, contract, approval declaration, receipt, or test proves runtime effect unless source evidence actually supports that distinction.',
-      `Repository: ${repoContext.inventory.repository.slug}`,
-      `Default branch: ${repoContext.inventory.repository.defaultBranch}`,
-      `AVGL context: ${JSON.stringify(compact)}`,
-      `Repository tree (bounded):\n${tree.join('\n')}`,
-      `Relevant source excerpts:\n${fileContext || '(No relevant file content could be loaded.)'}`
+      'Repository: ' + repoContext.inventory.repository.slug,
+      'Default branch: ' + repoContext.inventory.repository.defaultBranch,
+      'AVGL context: ' + JSON.stringify(compact),
+      'Repository tree (bounded):\n' + tree.join('\n'),
+      'Relevant source excerpts:\n' + (fileContext || '(No relevant file content could be loaded.)')
     ].join('\n\n');
 
     const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        Authorization: 'Bearer ' + process.env.OPENROUTER_API_KEY,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://avgl.vercel.app',
         'X-Title': 'AVGL Repository Assistant'
@@ -111,7 +118,7 @@ export default async function handler(request, response) {
 
     const payload = await openRouterResponse.json().catch(() => ({}));
     if (!openRouterResponse.ok) {
-      return response.status(502).json({ error: payload?.error?.message || `OpenRouter request failed (${openRouterResponse.status}).` });
+      return response.status(502).json({ error: payload?.error?.message || 'OpenRouter request failed (' + openRouterResponse.status + ').' });
     }
     const answer = payload?.choices?.[0]?.message?.content;
     if (typeof answer !== 'string' || !answer.trim()) return response.status(502).json({ error: 'OpenRouter returned no answer.' });

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avgl.dev/schema/avgl-workspace-v0.1.json",
+  "title": "AVGL Workspace IR v0.1",
+  "type": "object",
+  "required": [
+    "avglWorkspaceVersion",
+    "generatedAt",
+    "source",
+    "repositories",
+    "repositoryIrs",
+    "relations",
+    "effectChains",
+    "invariants"
+  ],
+  "properties": {
+    "avglWorkspaceVersion": {
+      "const": "0.1"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object"
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "revision",
+          "scanComplete",
+          "provides",
+          "dependsOn",
+          "effectCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scanComplete": {
+            "type": "boolean"
+          },
+          "provides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effectCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "repositoryIrs": {
+      "type": "object"
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "from",
+          "to",
+          "basis",
+          "confidence",
+          "evidence"
+        ],
+        "properties": {
+          "basis": {
+            "enum": [
+              "EXPLICIT",
+              "INFERRED",
+              "DERIVED"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "effectChains": {
+      "type": "array"
+    },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}
