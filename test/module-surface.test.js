@@ -7,4 +7,6 @@ test('public module surface instantiates without missing ESM exports', async () 
   assert.equal(typeof module.analyzeGitHubRepository, 'function');
   assert.equal(typeof module.listUserInstallationRepositories, 'function');
   assert.equal(typeof module.verifyUserInstallationAccess, 'function');
+  assert.equal(typeof module.resolveSemanticCandidate, 'function');
+  assert.equal(typeof module.SEMANTIC_RESOLVER_VERSION, 'string');
 });
