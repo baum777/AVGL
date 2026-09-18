@@ -3,6 +3,7 @@ import { discoverFiles, isSensitivePath, isTextCandidate, sourceKindForPath } fr
 import { classifyDiscoveries } from './classify.js';
 import { bindAvglIr } from './bind.js';
 import { fetchCompleteGitHubTree, githubHeaders, parseGitHubRepository } from './github-tree.js';
+import { extractRelationFacts, resolveRelations, traceEffectChains } from './relations.js';
 
 const DEFAULT_MAX_FILES = 120;
 const DEFAULT_CONCURRENCY = 10;
@@ -139,6 +140,7 @@ export async function discoverGitHubRepository(input, options = {}) {
   const observations = [];
   const sourceCoverage = emptyCoverage();
   const contentFetchFailures = [];
+  const relationFacts = [];
   let filesScanned = 0;
   let bytesScanned = 0;
 
@@ -173,8 +175,12 @@ export async function discoverGitHubRepository(input, options = {}) {
 
     filesScanned += batchDiscovery.filesScanned;
     observations.push(...batchDiscovery.observations);
+    relationFacts.push(...loaded.map(extractRelationFacts));
     mergeCoverage(sourceCoverage, batchDiscovery.sourceCoverage);
   }
+
+  const resolvedRelations = resolveRelations(relationFacts, blobs.map((file) => file.path));
+  const effectChains = traceEffectChains(resolvedRelations);
 
   const selectedAllEligible = candidates.length === eligible.length;
   const scanComplete = Boolean(tree.treeComplete) && selectedAllEligible && contentFetchFailures.length === 0;
@@ -200,7 +206,10 @@ export async function discoverGitHubRepository(input, options = {}) {
     skippedOversize: oversize.map((file) => file.path),
     contentFetchFailures,
     analysisMode,
-    observations
+    observations,
+    relations: resolvedRelations.relations,
+    effects: resolvedRelations.effects,
+    effectChains
   };
 }
 
