@@ -1,0 +1,109 @@
+name: Extract AVGL brand assets
+
+on:
+  push:
+    branches:
+      - chore/brand-assets-layered-projection
+    paths:
+      - AVGL_FULL_ASSET_PACKAGE_LAYERED_PROJECTION.zip
+      - .github/workflows/extract-avgl-brand-assets.yml
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Extract source package and create stable web aliases
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZIP="AVGL_FULL_ASSET_PACKAGE_LAYERED_PROJECTION.zip"
+          DEST="brand/layered-projection"
+          RELEASES="brand/releases"
+          TMP="$(mktemp -d)"
+
+          test -f "$ZIP"
+          unzip -q "$ZIP" -d "$TMP"
+
+          rm -rf "$DEST"
+          mkdir -p "$DEST" "$RELEASES" web/assets
+          cp -a "$TMP"/. "$DEST"/
+
+          # Keep the downloadable source bundle, but remove it from repo root.
+          git mv "$ZIP" "$RELEASES/$ZIP"
+
+          pick_first() {
+            local root="$1"
+            shift
+            for pattern in "$@"; do
+              local candidate
+              candidate="$(find "$root" -type f -iname "$pattern" | sort | head -n 1 || true)"
+              if [ -n "$candidate" ]; then
+                printf '%s' "$candidate"
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          favicon_svg="$(pick_first "$DEST/02_favicon_appicons" '*favicon*.svg' '*.svg' || true)"
+          favicon_ico="$(pick_first "$DEST/02_favicon_appicons" '*favicon*.ico' '*.ico' || true)"
+          mark_svg="$(pick_first "$DEST/01_logos" '*symbol*dark*.svg' '*mark*dark*.svg' '*symbol*.svg' '*mark*.svg' '*.svg' || true)"
+          logo_svg="$(pick_first "$DEST/01_logos" '*primary*dark*.svg' '*primary*.svg' '*horizontal*.svg' '*lockup*.svg' '*.svg' || true)"
+          icon_192="$(pick_first "$DEST/02_favicon_appicons" '*192*.png' '*192*.webp' || true)"
+          icon_512="$(pick_first "$DEST/02_favicon_appicons" '*512*.png' '*512*.webp' || true)"
+          apple_icon="$(pick_first "$DEST/02_favicon_appicons" '*180*.png' '*apple*.png' || true)"
+          og_image="$(pick_first "$DEST/06_marketing" '*og*.png' '*social*.png' '*.png' || true)"
+
+          test -n "$favicon_svg"
+          test -n "$mark_svg"
+
+          cp "$favicon_svg" web/assets/favicon.svg
+          cp "$mark_svg" web/assets/avgl-mark.svg
+
+          [ -z "$favicon_ico" ] || cp "$favicon_ico" web/assets/favicon.ico
+          [ -z "$logo_svg" ] || cp "$logo_svg" web/assets/avgl-logo.svg
+          [ -z "$icon_192" ] || cp "$icon_192" web/assets/icon-192.png
+          [ -z "$icon_512" ] || cp "$icon_512" web/assets/icon-512.png
+          [ -z "$apple_icon" ] || cp "$apple_icon" web/assets/apple-touch-icon.png
+          [ -z "$og_image" ] || cp "$og_image" web/assets/og-image.png
+
+          cat > web/site.webmanifest <<'JSON'
+          {
+            "name": "AVGL — Agent Visual Grammar Language",
+            "short_name": "AVGL",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#111417",
+            "theme_color": "#111417",
+            "icons": [
+              { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+              { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+            ]
+          }
+          JSON
+
+          # Extraction helper is intentionally one-shot.
+          rm -f .github/workflows/extract-avgl-brand-assets.yml
+
+          echo "Extracted files: $(find "$DEST" -type f | wc -l)"
+          echo "Brand aliases:"
+          ls -lh web/assets/favicon.svg web/assets/avgl-mark.svg
+          ls -lh web/assets/favicon.ico web/assets/avgl-logo.svg web/assets/icon-192.png web/assets/icon-512.png web/assets/apple-touch-icon.png web/assets/og-image.png 2>/dev/null || true
+
+      - name: Commit extracted assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "brand: extract layered projection asset package"
+          git push origin HEAD:chore/brand-assets-layered-projection
