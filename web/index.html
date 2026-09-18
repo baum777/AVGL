@@ -7,10 +7,14 @@
   <meta name="theme-color" content="#F7F7F4">
   <meta property="og:title" content="AVGL — Understand the agent, not the graph">
   <meta property="og:description" content="One model. Many lenses. Evidence-bound repository analysis for understandable agent systems.">
-  <meta property="og:image" content="/assets/brand/06_marketing/og/avgl-og-main.png">
-  <link rel="icon" type="image/svg+xml" href="/assets/brand/02_favicon_appicons/favicon.svg">
-  <link rel="apple-touch-icon" href="/assets/brand/02_favicon_appicons/avgl-app-icon-light-180.png">
-  <link rel="manifest" href="/assets/brand/02_favicon_appicons/site.webmanifest">
+  <meta property="og:image" content="/assets/06_marketing/og/avgl-og-main.png">
+  <link rel="icon" href="/assets/02_favicon_appicons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/assets/02_favicon_appicons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/02_favicon_appicons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/02_favicon_appicons/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/02_favicon_appicons/avgl-app-icon-light-180.png">
+  <link rel="manifest" href="/assets/02_favicon_appicons/site.webmanifest">
+  <link rel="stylesheet" href="/assets/03_foundations/design-tokens.css">
   <title>AVGL — Understand the agent, not the graph</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand-polish.css">
@@ -19,12 +23,12 @@
 <body>
   <header class="site-header">
     <a class="brand" href="/" aria-label="AVGL home">
-      <img class="brand-logo" src="/assets/brand/01_logos/svg/avgl-primary-horizontal.svg" alt="AVGL — Agent Visual Grammar Language">
+      <img class="brand-logo" src="/assets/01_logos/svg/avgl-primary-horizontal.svg" alt="AVGL — Agent Visual Grammar Language">
     </a>
     <div class="header-actions">
       <nav id="header-nav" class="header-nav">
-        <button id="workspace-toggle" class="lang-toggle header-button" type="button" data-i18n="workspace">
-          <img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-workspace.svg" alt="">Workspace
+        <button id="workspace-toggle" class="lang-toggle header-button" type="button">
+          <img aria-hidden="true" src="/assets/04_iconography/ui/avgl-workspace.svg" alt=""><span data-i18n="workspace">Workspace</span>
         </button>
         <button id="github-connect" class="lang-toggle" type="button" data-i18n="connectGitHub">Connect GitHub</button>
         <a class="lang-toggle header-link" href="https://github.com/baum777/AVGL" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
@@ -54,23 +58,23 @@
         </div>
         <div class="source-mode-row">
           <div class="scan-mode-toggle source-toggle" role="group" aria-label="Repository source">
-            <button id="source-public" class="scan-mode-button active" type="button" data-source-mode="public" data-i18n="publicRepo">Public URL</button>
-            <button id="source-private" class="scan-mode-button" type="button" data-source-mode="github_app" data-i18n="privateRepo">Private GitHub</button>
+            <button id="source-public" class="scan-mode-button source-mode-button active" type="button" data-source-mode="public"><img aria-hidden="true" src="/assets/04_iconography/ui/avgl-repository.svg" alt=""><span data-i18n="publicRepo">Public URL</span></button>
+            <button id="source-private" class="scan-mode-button source-mode-button" type="button" data-source-mode="github_app"><img aria-hidden="true" src="/assets/04_iconography/core/avgl-identity.svg" alt=""><span data-i18n="privateRepo">Private GitHub</span></button>
           </div>
         </div>
         <p id="github-user-status" class="scan-mode-hint" data-i18n="publicMode">Public repository mode</p>
         <div id="public-repo-input" class="input-row">
           <input id="repository" name="repository" type="text" inputmode="url" autocomplete="off" placeholder="github.com/owner/repository" required>
-          <button id="analyze-button" class="primary-button" type="submit" data-i18n="analyze">Analyze</button>
+          <button id="analyze-button" class="primary-button action-with-icon" type="submit"><img aria-hidden="true" src="/assets/04_iconography/ui/avgl-analyze.svg" alt=""><span data-i18n="analyze">Analyze</span></button>
         </div>
         <div id="private-disconnected" class="private-disconnected" hidden>
           <p class="scan-mode-hint" data-i18n="privateNeedsConnection">Private repositories require a GitHub connection.</p>
-          <button id="connect-github-cta" class="primary-button" type="button" data-i18n="connectGitHub">Connect GitHub</button>
+          <button id="connect-github-cta" class="primary-button action-with-icon" type="button"><img aria-hidden="true" src="/assets/04_iconography/core/avgl-identity.svg" alt=""><span data-i18n="connectGitHub">Connect GitHub</span></button>
         </div>
         <div id="private-repo-input" class="private-repo-input" hidden>
           <label class="scan-mode-label" for="private-repository" data-i18n="selectGrantedRepo">Repository</label>
           <select id="private-repository" aria-label="Private repository"></select>
-          <button id="analyze-private-button" class="primary-button" type="button" data-i18n="analyze">Analyze</button>
+          <button id="analyze-private-button" class="primary-button action-with-icon" type="button"><img aria-hidden="true" src="/assets/04_iconography/ui/avgl-analyze.svg" alt=""><span data-i18n="analyze">Analyze</span></button>
         </div>
         <div class="scan-mode-row">
           <span class="scan-mode-label" data-i18n="scanModeLabel">Scan mode</span>
@@ -96,7 +100,7 @@
       </div>
       <div class="workspace-add-row">
         <input id="workspace-repo-input" type="text" placeholder="owner/repository">
-        <button id="workspace-add" class="lang-toggle" type="button" data-i18n="addRepo">Add repository</button>
+        <button id="workspace-add" class="lang-toggle action-with-icon" type="button"><img aria-hidden="true" src="/assets/04_iconography/ui/avgl-repository.svg" alt=""><span data-i18n="addRepo">Add repository</span></button>
       </div>
       <div id="workspace-connected" class="workspace-connected" hidden>
         <p class="workspace-label" data-i18n="connectedRepos">Connected GitHub repositories</p>
@@ -108,7 +112,7 @@
       </div>
       <div class="workspace-actions">
         <span id="workspace-status" class="scan-mode-hint"></span>
-        <button id="workspace-analyze" class="primary-button" type="button" data-i18n="analyzeWorkspace">Analyze workspace</button>
+        <button id="workspace-analyze" class="primary-button action-with-icon" type="button"><img aria-hidden="true" src="/assets/04_iconography/ui/avgl-analyze.svg" alt=""><span data-i18n="analyzeWorkspace">Analyze workspace</span></button>
       </div>
       <div id="workspace-error" class="error" hidden></div>
       <div id="workspace-result" class="workspace-result" hidden></div>
@@ -122,10 +126,10 @@
       <div id="partial-warning" class="notice" hidden></div>
 
       <nav class="view-tabs" aria-label="Analysis views">
-        <button type="button" class="view-tab active" data-view="story" aria-selected="true"><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-agentic.svg" alt=""><span data-i18n="tabStory">Story</span></button>
-        <button type="button" class="view-tab" data-view="files" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-file.svg" alt=""><span data-i18n="tabFiles">Files</span></button>
-        <button type="button" class="view-tab" data-view="inspect" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-inspect.svg" alt=""><span data-i18n="tabInspect">Inspect</span></button>
-        <button type="button" class="view-tab" data-view="system" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-structure.svg" alt=""><span data-i18n="tabSystem">System</span></button>
+        <button type="button" class="view-tab active" data-view="story" aria-selected="true"><img aria-hidden="true" src="/assets/04_iconography/lenses/avgl-agentic.svg" alt=""><span data-i18n="tabStory">Story</span></button>
+        <button type="button" class="view-tab" data-view="files" aria-selected="false"><img aria-hidden="true" src="/assets/04_iconography/lenses/avgl-structure.svg" alt=""><span data-i18n="tabFiles">Files</span></button>
+        <button type="button" class="view-tab" data-view="inspect" aria-selected="false"><img aria-hidden="true" src="/assets/04_iconography/lenses/avgl-evidence.svg" alt=""><span data-i18n="tabInspect">Inspect</span></button>
+        <button type="button" class="view-tab" data-view="system" aria-selected="false"><img aria-hidden="true" src="/assets/04_iconography/lenses/avgl-context.svg" alt=""><span data-i18n="tabSystem">System</span></button>
       </nav>
 
       <div id="story-view" class="view-panel"></div>
@@ -137,6 +141,7 @@
             <p data-i18n="filesIntro">Browse the repository by hierarchy. Select a file to get a grounded description of its role, content, and likely effect.</p>
           </div>
           <div class="file-search-wrap">
+            <img class="field-icon" aria-hidden="true" src="/assets/04_iconography/ui/avgl-search.svg" alt="">
             <input id="file-search" type="search" data-i18n-placeholder="searchFiles" placeholder="Search files…">
             <span id="file-count" class="meta-chip"></span>
           </div>
@@ -149,7 +154,7 @@
           </aside>
           <section class="file-detail-panel" aria-live="polite">
             <div id="file-empty" class="file-empty">
-              <img class="empty-state-art" src="/assets/brand/05_ui_assets/empty_states/avgl-empty-no-file.svg" alt="">
+              <img class="empty-state-art" src="/assets/05_ui_assets/empty_states/avgl-empty-no-file.svg" alt="">
               <strong data-i18n="selectFile">Select a file</strong>
               <span data-i18n="selectFileHint">AVGL will explain what it contains, what role it plays, and which semantic areas it touches.</span>
             </div>
@@ -188,25 +193,25 @@
 
     <section class="data-spider-section" aria-label="AVGL data flow iconography">
       <div class="data-spider-visual">
-        <img src="/assets/brand/05_ui_assets/empty_states/avgl-empty-no-evidence.svg" alt="AVGL data flow topology">
+        <img src="/assets/iconography-preview.svg" alt="AVGL visual grammar and data-flow iconography">
       </div>
     </section>
 
     <section class="principle-strip" aria-label="AVGL principles">
-      <div><strong>CAN ≠ MAY</strong><span data-i18n="principleCanMay">Technical reach is not permission.</span></div>
-      <div><strong>ACT ≠ DID</strong><span data-i18n="principleActDid">An effect path is not a verified result.</span></div>
-      <div><strong>UNKNOWN STAYS UNKNOWN</strong><span data-i18n="principleUnknown">Missing evidence is never filled with a guess.</span></div>
+      <div><img aria-hidden="true" src="/assets/04_iconography/core/avgl-boundary.svg" alt=""><strong>CAN ≠ MAY</strong><span data-i18n="principleCanMay">Technical reach is not permission.</span></div>
+      <div><img aria-hidden="true" src="/assets/04_iconography/core/avgl-flow.svg" alt=""><strong>ACT ≠ DID</strong><span data-i18n="principleActDid">An effect path is not a verified result.</span></div>
+      <div><img aria-hidden="true" src="/assets/04_iconography/states/avgl-unknown.svg" alt=""><strong>UNKNOWN STAYS UNKNOWN</strong><span data-i18n="principleUnknown">Missing evidence is never filled with a guess.</span></div>
     </section>
 
   </main>
 
   <footer>
-    <img class="footer-logo" src="/assets/brand/01_logos/svg/avgl-technical-lockup.svg" alt="AVGL">
+    <img class="footer-logo" src="/assets/01_logos/svg/avgl-technical-lockup.svg" alt="AVGL">
     <span>DISCOVER → EXTRACT → CLASSIFY → BIND → RESOLVE RELATIONS → TRACE EFFECTS → SYNTHESIZE → PROJECT</span>
   </footer>
 
   <button id="assistant-fab" class="assistant-fab" type="button" aria-haspopup="dialog" aria-controls="assistant-panel" aria-label="Ask AVGL">
-    <img class="assistant-fab-icon" aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-assistant.svg" alt="">
+    <img class="assistant-fab-icon" aria-hidden="true" src="/assets/04_iconography/ui/avgl-assistant.svg" alt="">
     <span data-i18n="askAvgl">Ask AVGL</span>
   </button>
 
