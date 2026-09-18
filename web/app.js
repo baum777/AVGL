@@ -210,3 +210,40 @@ if(params.get("github")==="connected"){history.replaceState({},document.title,lo
 
 const assetLibrary=$("#asset-library");if(assetLibrary)assetLibrary.addEventListener("toggle",()=>{if(assetLibrary.open)loadAssetLibrary()});
 setScanStrategy("full");setSourceMode("public");applyLocale();renderSuggestions();renderWorkspaceSelected();updateAssistantContext();
+
+// Brand asset library — sourced from the repository's canonical bundled package.
+const assetLibrary=$("#asset-library");
+let assetLibraryLoaded=false;
+function brandAssetUrl(relative){
+  return "/assets/brand/"+relative.split("/").map(encodeURIComponent).join("/");
+}
+function assetCard(file){
+  const prefix="AVGL_FULL_ASSET_PACKAGE/";
+  const relative=String(file.name||"").startsWith(prefix)?String(file.name).slice(prefix.length):String(file.name||"");
+  const ext=(relative.split(".").pop()||"").toLowerCase();
+  const renderable=["svg","png"].includes(ext);
+  const a=el("a","asset-card");
+  a.href=brandAssetUrl(relative);a.target="_blank";a.rel="noopener noreferrer";a.title=relative;
+  const preview=el("div","asset-preview"+(renderable?"":" asset-doc"));
+  if(renderable){
+    const img=document.createElement("img");img.src=brandAssetUrl(relative);img.alt="";img.loading="lazy";img.decoding="async";preview.append(img);
+  }else preview.textContent=ext?ext.toUpperCase():"FILE";
+  a.append(preview,el("div","asset-name",relative.split("/").pop()||relative),el("div","asset-path",relative));
+  return a;
+}
+async function loadAssetLibrary(){
+  if(assetLibraryLoaded||!assetLibrary)return;
+  assetLibraryLoaded=true;
+  const host=$("#asset-grid"),count=$("#asset-library-count");
+  host.replaceChildren(el("p","relation-empty","Loading bundled assets…"));
+  try{
+    const r=await fetch("/api/asset-extract?list=1"),p=await r.json();
+    if(!r.ok)throw Error(p.error||"Asset list unavailable");
+    count.textContent=p.count+" bundled assets";
+    host.replaceChildren();
+    (p.files||[]).forEach(file=>host.append(assetCard(file)));
+  }catch(error){
+    host.replaceChildren(el("div","asset-error",error.message));
+  }
+}
+if(assetLibrary)assetLibrary.addEventListener("toggle",()=>{if(assetLibrary.open)loadAssetLibrary()});
