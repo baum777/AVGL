@@ -369,3 +369,30 @@ body.keyboard-open .assistant-fab{
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto !important;transition:none !important;animation:none !important}
 }
+
+
+/* Simplified visual surface: keep only the AVGL data-flow / "data spider" iconography. */
+.hero-grid{display:block !important}
+.data-spider-section{
+  margin:var(--space-6) 0;
+  display:flex;
+  justify-content:center;
+}
+.data-spider-visual{
+  width:min(100%,520px);
+  aspect-ratio:520/225;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#F7F7F4;
+}
+.data-spider-visual img{
+  display:block;
+  width:100%;
+  height:auto;
+  transform:translateY(-2%);
+}
+@media (min-width:768px){
+  .data-spider-section{margin:var(--space-7) 0}
+  .data-spider-visual{width:min(460px,100%)}
+}
