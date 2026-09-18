@@ -582,7 +582,7 @@ const MAY_APPROVAL_PATTERNS = Object.freeze([
 ]);
 
 const MAY_GRANT_PATTERNS = Object.freeze([
-  /\b(?:issueGrant|createGrant|validateGrant|consumeGrant|revokeGrant)\s*\(/,
+  /\b(?:issueGrant|createGrant|validateGrant|consumeGrant)\s*\(/,
   /\bgrant\.(?:validate|consume|revoke|isValid|expiresAt|capabilities|scope)\b/i,
   /\b(?:grantId|grant_id|grantToken|grant_token)\s*[:=]/i
 ]);
