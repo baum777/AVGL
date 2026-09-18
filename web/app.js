@@ -14,42 +14,6 @@ function areaFor(c){return state.ir?.synthesis?.areas?.[c]||null}
 function famLabel(f){return state.locale==="de"?(FAMILY_DE[f.id]||f.label):f.label}
 function summary(c){const a=areaFor(c),n=nodeFor(c);if(!a||a.status!=="EVIDENCED")return t("notFound");const labels=(a.families||[]).map(famLabel);return (PREFIX[state.locale][c]||c)+": "+(labels.length?labels.join(", "):(n?.label||"bounded signals"))+"."}
 function fmtBytes(v){v=Number(v||0);return v<1024?v+" B":v<1048576?(v/1024).toFixed(1)+" KB":(v/1048576).toFixed(1)+" MB"}
-const BRAND_ASSET_PREFIX="AVGL_FULL_ASSET_PACKAGE/";
-function brandAssetUrl(path){return "/api/asset-extract?raw=1&path="+encodeURIComponent(path)}
-async function loadAssetLibrary(){
- const details=$("#asset-library"),host=$("#asset-library-grid");
- if(!details||!host||details.dataset.loaded==="true")return;
- details.dataset.loaded="loading";
- try{
-  const r=await fetch("/api/asset-extract?list=1"),payload=await r.json();
-  if(!r.ok)throw Error(payload.error||"Asset list unavailable");
-  $("#asset-count").textContent=String(payload.count||0);
-  const groups=new Map();
-  (payload.files||[]).forEach(file=>{
-   const relative=file.name.startsWith(BRAND_ASSET_PREFIX)?file.name.slice(BRAND_ASSET_PREFIX.length):file.name;
-   const [group="root",...rest]=relative.split("/");
-   if(!groups.has(group))groups.set(group,[]);
-   groups.get(group).push({...file,relative,label:rest.join("/")||relative})
-  });
-  host.replaceChildren();
-  [...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).forEach(([group,files])=>{
-   host.append(el("h3","asset-group-title",group.replace(/^\d+_/,"").replaceAll("_"," ")));
-   files.sort((a,b)=>a.label.localeCompare(b.label)).forEach(file=>{
-    const card=el("a","asset-card");card.href=brandAssetUrl(file.name);card.target="_blank";card.rel="noopener";card.title=file.relative;
-    const preview=el("span","asset-preview"),ext=(file.name.split(".").pop()||"").toLowerCase();
-    if(["svg","png","ico"].includes(ext)){
-      const img=document.createElement("img");img.loading="lazy";img.alt="";img.src=brandAssetUrl(file.name);preview.append(img)
-    }else{
-      preview.append(el("span","asset-type",ext.toUpperCase()||"FILE"))
-    }
-    card.append(preview,el("span","asset-name",file.label));host.append(card)
-   })
-  });
-  details.dataset.loaded="true"
- }catch(error){
-  host.replaceChildren(el("p","relation-empty",error.message));details.dataset.loaded="error"
- }
-}
 function chip(text,cls=""){return el("span","chip "+cls,text)}
 function applyLocale(){
  document.documentElement.lang=state.locale;$("#lang-toggle").textContent=state.locale==="de"?"EN":"DE";
@@ -208,42 +172,40 @@ $("#workspace-analyze").onclick=async()=>{
 const params=new URLSearchParams(location.search);
 if(params.get("github")==="connected"){history.replaceState({},document.title,location.pathname);refreshGitHubSession().then(ok=>{if(ok)setSourceMode("github_app")})}else{refreshGitHubSession()}
 
-const assetLibrary=$("#asset-library");if(assetLibrary)assetLibrary.addEventListener("toggle",()=>{if(assetLibrary.open)loadAssetLibrary()});
 setScanStrategy("full");setSourceMode("public");applyLocale();renderSuggestions();renderWorkspaceSelected();updateAssistantContext();
 
-// Brand asset library — sourced from the repository's canonical bundled package.
+// Brand asset library — materialized from the canonical ZIP at build time.
+const BRAND_ASSET_PREFIX="AVGL_FULL_ASSET_PACKAGE/";
+const BRAND_STATIC_ROOT="/assets/brand/";
 const assetLibrary=$("#asset-library");
 let assetLibraryLoaded=false;
-function brandAssetUrl(relative){
-  return "/api/brand-asset?path="+relative.split("/").map(encodeURIComponent).join("/");
+function brandAssetUrl(path){
+  const relative=String(path||"").replace(BRAND_ASSET_PREFIX,"").replace(/^\\/+/,"");
+  return BRAND_STATIC_ROOT+relative.split("/").map(encodeURIComponent).join("/");
 }
 function assetCard(file){
-  const prefix="AVGL_FULL_ASSET_PACKAGE/";
-  const relative=String(file.name||"").startsWith(prefix)?String(file.name).slice(prefix.length):String(file.name||"");
+  const relative=String(file.name||"").replace(BRAND_ASSET_PREFIX,"");
   const ext=(relative.split(".").pop()||"").toLowerCase();
-  const renderable=["svg","png"].includes(ext);
-  const a=el("a","asset-card");
-  a.href=brandAssetUrl(relative);a.target="_blank";a.rel="noopener noreferrer";a.title=relative;
+  const renderable=["svg","png","ico"].includes(ext);
+  const a=el("a","asset-card");a.href=brandAssetUrl(relative);a.target="_blank";a.rel="noopener noreferrer";a.title=relative;
   const preview=el("div","asset-preview"+(renderable?"":" asset-doc"));
-  if(renderable){
-    const img=document.createElement("img");img.src=brandAssetUrl(relative);img.alt="";img.loading="lazy";img.decoding="async";preview.append(img);
-  }else preview.textContent=ext?ext.toUpperCase():"FILE";
+  if(renderable){const img=document.createElement("img");img.src=brandAssetUrl(relative);img.alt="";img.loading="lazy";img.decoding="async";preview.append(img)}
+  else preview.textContent=ext?ext.toUpperCase():"FILE";
   a.append(preview,el("div","asset-name",relative.split("/").pop()||relative),el("div","asset-path",relative));
   return a;
 }
 async function loadAssetLibrary(){
   if(assetLibraryLoaded||!assetLibrary)return;
   assetLibraryLoaded=true;
-  const host=$("#asset-grid"),count=$("#asset-library-count");
+  const host=$("#asset-library-grid"),count=$("#asset-count");
   host.replaceChildren(el("p","relation-empty","Loading bundled assets…"));
   try{
-    const r=await fetch("/api/asset-extract?list=1"),p=await r.json();
-    if(!r.ok)throw Error(p.error||"Asset list unavailable");
-    count.textContent=p.count+" bundled assets";
+    const r=await fetch(BRAND_STATIC_ROOT+"manifest.json"),manifest=await r.json();
+    if(!r.ok)throw Error("Asset manifest unavailable");
+    const files=[...(manifest.files||[]).map(file=>({name:BRAND_ASSET_PREFIX+file.path})),{name:BRAND_ASSET_PREFIX+"manifest.json"},{name:BRAND_ASSET_PREFIX+"manifest.txt"}];
+    count.textContent=files.length+" bundled assets";
     host.replaceChildren();
-    (p.files||[]).forEach(file=>host.append(assetCard(file)));
-  }catch(error){
-    host.replaceChildren(el("div","asset-error",error.message));
-  }
+    files.forEach(file=>host.append(assetCard(file)));
+  }catch(error){host.replaceChildren(el("div","asset-error",error.message));assetLibraryLoaded=false}
 }
 if(assetLibrary)assetLibrary.addEventListener("toggle",()=>{if(assetLibrary.open)loadAssetLibrary()});
