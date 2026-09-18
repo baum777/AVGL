@@ -34,10 +34,6 @@
     "api/asset-extract.mjs": {
       "maxDuration": 30,
       "includeFiles": "AVGL_FULL_ASSET_PACKAGE_LAYERED_PROJECTION.zip"
-    },
-    "api/brand-asset.mjs": {
-      "maxDuration": 30,
-      "includeFiles": "AVGL_FULL_ASSET_PACKAGE_LAYERED_PROJECTION.zip"
     }
   },
   "rewrites": [
