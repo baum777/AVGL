@@ -38,6 +38,21 @@ function parseEntries(buf) {
   return entries;
 }
 
+function contentTypeFor(name) {
+  const ext = path.extname(name).toLowerCase();
+  return ({
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+    ".pdf": "application/pdf",
+    ".json": "application/json; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".md": "text/markdown; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+    ".webmanifest": "application/manifest+json; charset=utf-8"
+  })[ext] || "application/octet-stream";
+}
+
 function extractEntry(buf, entry) {
   const p = entry.localOffset;
   if (buf.readUInt32LE(p) !== LOC_SIG) throw new Error("Invalid local header");
@@ -90,6 +105,13 @@ export default async function handler(req, res) {
     const entry = entries.find((e) => e.name === requested);
     if (!entry) return res.status(404).json({ error: "not_found" });
     const out = extractEntry(zip, entry);
+
+    if (req.query?.raw === "1") {
+      res.setHeader("Content-Type", contentTypeFor(entry.name));
+      res.setHeader("Content-Length", String(out.length));
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return res.status(200).send(out);
+    }
 
     return res.status(200).json({
       path: entry.name,
