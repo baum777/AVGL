@@ -215,7 +215,7 @@ setScanStrategy("full");setSourceMode("public");applyLocale();renderSuggestions(
 const assetLibrary=$("#asset-library");
 let assetLibraryLoaded=false;
 function brandAssetUrl(relative){
-  return "/assets/brand/"+relative.split("/").map(encodeURIComponent).join("/");
+  return "/api/brand-asset?path="+relative.split("/").map(encodeURIComponent).join("/");
 }
 function assetCard(file){
   const prefix="AVGL_FULL_ASSET_PACKAGE/";
