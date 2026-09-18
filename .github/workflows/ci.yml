@@ -5,9 +5,38 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  materialize-brand-assets:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/brand-assets-responsive-polish-20260918' && !contains(github.event.head_commit.message, '[asset-materialize]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/brand-assets-responsive-polish-20260918
+          fetch-depth: 0
+      - name: Materialize packaged brand assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf web/assets/brand .tmp-avgl-assets
+          mkdir -p web/assets/brand .tmp-avgl-assets
+          unzip -q AVGL_FULL_ASSET_PACKAGE_LAYERED_PROJECTION.zip -d .tmp-avgl-assets
+          cp -R .tmp-avgl-assets/AVGL_FULL_ASSET_PACKAGE/. web/assets/brand/
+          rm -rf .tmp-avgl-assets
+          test -f web/assets/brand/08_guidelines/AVGL_BRAND_GUIDELINES.pdf
+          test -f web/assets/brand/manifest.json
+          git add web/assets/brand
+          if git diff --cached --quiet; then
+            echo "Brand assets already materialized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(assets): materialize packaged brand assets [asset-materialize]"
+          git push origin HEAD:feat/brand-assets-responsive-polish-20260918
+
   test:
     runs-on: ubuntu-latest
     steps:
