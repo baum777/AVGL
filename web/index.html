@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="/api/asset-extract?raw=1&path=AVGL_FULL_ASSET_PACKAGE%2F02_favicon_appicons%2Favgl-app-icon-light-180.png">
   <link rel="manifest" href="/api/asset-extract?raw=1&path=AVGL_FULL_ASSET_PACKAGE%2F02_favicon_appicons%2Fsite.webmanifest">
   <title>AVGL — Understand the agent, not the graph</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css">\n  <link rel="stylesheet" href="/brand-polish.css">
 </head>
 <body>
   <header class="site-header">
@@ -33,7 +33,8 @@
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-grid">
         <div class="hero-content">
-          <p class="eyebrow">Agent Visual Grammar Language</p>
+          <div class="hero-lockup" aria-hidden="true"><img src="/assets/brand/01_logos/svg/avgl-technical-lockup.svg" alt=""></div>
+      <p class="eyebrow">Agent Visual Grammar Language</p>
           <h1 id="hero-title"><span data-i18n="heroLine1">Understand the agent.</span><br><span class="muted-headline" data-i18n="heroLine2">Not the graph.</span></h1>
           <p class="hero-copy" data-i18n="heroCopy">Analyze public repositories directly or connect GitHub for user-scoped private repositories. AVGL maps evidence into readable system stories, repository relations, and cross-repository workspaces.</p>
           <div class="hero-principles" aria-label="AVGL core principles">
@@ -187,7 +188,45 @@
       <div id="system-view" class="view-panel" hidden></div>
     </section>
 
-    <section class="principle-strip" aria-label="AVGL principles">
+    <section class="brand-showcase" aria-labelledby="brand-system-title">
+      <div class="brand-showcase-head">
+        <div>
+          <p class="eyebrow">Layered Projection Brand System</p>
+          <h2 id="brand-system-title">One model. Many lenses.</h2>
+          <p class="brand-showcase-copy">AVGL keeps one underlying system model stable while different lenses reveal structure, agentic behavior, context, inheritance, propagation, effective state and evidence. Geometry carries semantics; color reinforces state and selection.</p>
+        </div>
+        <span class="brand-principle">STRUCTURE = EFFECT</span>
+      </div>
+
+      <div class="brand-feature-grid">
+        <figure class="brand-feature-card primary">
+          <img src="/assets/brand/01_logos/svg/avgl-primary-horizontal.svg" alt="AVGL primary horizontal logo">
+        </figure>
+        <figure class="brand-feature-card reference">
+          <img src="/assets/brand/07_mockups_reference/AVGL_concept_2_layered_projection_reference.png" alt="AVGL layered projection reference">
+        </figure>
+      </div>
+
+      <div class="brand-core-row" aria-label="AVGL structural primitives">
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-object.svg" alt=""><span>Object</span></div>
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-space.svg" alt=""><span>Space</span></div>
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-boundary.svg" alt=""><span>Boundary</span></div>
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-relation.svg" alt=""><span>Relation</span></div>
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-flow.svg" alt=""><span>Flow</span></div>
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-state.svg" alt=""><span>State</span></div>
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-transformation.svg" alt=""><span>Transformation</span></div>
+        <div class="brand-core-item"><img src="/assets/brand/04_iconography/core/avgl-identity.svg" alt=""><span>Identity</span></div>
+      </div>
+
+      <details id="asset-library" class="asset-library">
+        <summary>
+          <span>Full AVGL asset library</span>
+          <span id="asset-library-count" class="asset-library-count">115 bundled assets</span>
+        </summary>
+        <div id="asset-grid" class="asset-grid" aria-live="polite"></div>
+      </details>
+    </section>
+\n    <section class="principle-strip" aria-label="AVGL principles">
       <div><img aria-hidden="true" src="/api/asset-extract?raw=1&path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-effective.svg"><strong>CAN ≠ MAY</strong><span data-i18n="principleCanMay">Technical reach is not permission.</span></div>
       <div><img aria-hidden="true" src="/api/asset-extract?raw=1&path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Flenses%2Favgl-evidence.svg"><strong>ACT ≠ DID</strong><span data-i18n="principleActDid">An effect path is not a verified result.</span></div>
       <div><img aria-hidden="true" src="/api/asset-extract?raw=1&path=AVGL_FULL_ASSET_PACKAGE%2F04_iconography%2Fstates%2Favgl-unknown.svg"><strong>UNKNOWN stays UNKNOWN</strong><span data-i18n="principleUnknown">Missing evidence is never filled with a guess.</span></div>
