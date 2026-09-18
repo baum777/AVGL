@@ -6,6 +6,7 @@ import { classifyDiscoveries, discoverFiles } from '../src/index.js';
 const canonicalCanvasFixture = new URL('./fixtures/semantic-resolution/canvas-context-negative.mjs', import.meta.url);
 const canonicalWhoNegativeFixture = new URL('./fixtures/semantic-resolution/who-non-agent-negative.mjs', import.meta.url);
 const canonicalThinkNegativeFixture = new URL('./fixtures/semantic-resolution/think-non-cognition-negative.mjs', import.meta.url);
+const canonicalCanNegativeFixture = new URL('./fixtures/semantic-resolution/can-non-capability-negative.mjs', import.meta.url);
 
 test('canonical negative fixture rejects Canvas 2D context as agentic KNOW evidence', async () => {
   const content = await readFile(canonicalCanvasFixture, 'utf8');
@@ -207,16 +208,126 @@ test('generic model tokens fail closed without LLM/runtime support', () => {
   assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-model-token'));
 });
 
-test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
-  const content = 'const tools = registerTools();';
+test('canonical CAN negative fixture rejects domain tools, browser metadata, UI shells, and diagram connectors', async () => {
+  const content = await readFile(canonicalCanNegativeFixture, 'utf8');
   const discovery = discoverFiles([{
-    path: 'src/tools.mjs',
+    path: 'src/ui/presentation.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const can = discovery.observations.filter((item) => item.candidateClass === 'CAN');
+  assert.equal(can.length, 0);
+
+  const rules = new Set(
+    discovery.semanticRejections
+      .filter((item) => item.candidateClass === 'CAN')
+      .map((item) => item.rule)
+  );
+
+  assert.equal(rules.has('generic-domain-tool'), true);
+  assert.equal(rules.has('browser-metadata'), true);
+  assert.equal(rules.has('ui-layout-shell'), true);
+  assert.equal(rules.has('diagram-connector'), true);
+});
+
+test('CAN accepts explicit MCP tool surfaces and preserves semantic provenance', () => {
+  const content = [
+    "import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';",
+    "const server = new McpServer({ name: 'avgl' });",
+    "server.tool('scan_repo', {}, async () => ({ content: [] }));"
+  ].join('\n');
+
+  const discovery = discoverFiles([{
+    path: 'src/mcp/server.mjs',
     content,
     size: Buffer.byteLength(content, 'utf8')
   }]);
 
   const can = discovery.observations.find((item) => item.candidateClass === 'CAN');
   assert.ok(can);
-  assert.equal(can.semanticResolution.mode, 'LEXICAL_FALLBACK');
+  assert.equal(can.semanticResolution.mode, 'SEMANTIC');
+  assert.equal(can.semanticResolution.resolver, 'can.capability.v1');
+  assert.equal(can.semanticResolution.rule, 'explicit-mcp-capability');
+
+  const classified = classifyDiscoveries(discovery);
+  const claim = classified.classifications.find((item) => item.semanticClass === 'CAN');
+  assert.ok(claim);
+  assert.equal(claim.evidence[0].semanticResolution.resolver, 'can.capability.v1');
+});
+
+test('CAN accepts explicit agent tool configuration without implying MAY or ACT', () => {
+  const content = [
+    'export const agent = {',
+    "  model: 'gpt-5.6',",
+    "  prompt: 'Review repository',",
+    '  tools: [searchRepo, readFile]',
+    '};'
+  ].join('\n');
+
+  const discovery = discoverFiles([{
+    path: 'src/agents/reviewer.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const can = discovery.observations.find((item) => item.candidateClass === 'CAN');
+  assert.ok(can);
+  assert.equal(can.semanticResolution.rule, 'explicit-tool-surface');
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'MAY'), false);
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'ACT'), false);
+});
+
+test('CAN treats fetch as static network reachability, not permission or execution proof', () => {
+  const content = "const response = await fetch(endpoint);";
+  const discovery = discoverFiles([{
+    path: 'src/tools/http-client.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const can = discovery.observations.find((item) => item.candidateClass === 'CAN');
+  assert.ok(can);
+  assert.equal(can.semanticResolution.resolver, 'can.capability.v1');
+  assert.equal(can.semanticResolution.rule, 'network-client-reachability');
+  assert.match(can.semanticResolution.reason, /does not prove permission or runtime execution/);
+});
+
+test('CAN accepts concrete browser automation surfaces', () => {
+  const content = 'const browser = await chromium.launch();';
+  const discovery = discoverFiles([{
+    path: 'src/tools/browser-tool.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const can = discovery.observations.find((item) => item.candidateClass === 'CAN');
+  assert.ok(can);
+  assert.equal(can.semanticResolution.rule, 'browser-automation-surface');
+});
+
+test('generic capability words in documentation fail closed', () => {
+  const content = 'This tool uses a browser adapter and connector.';
+  const discovery = discoverFiles([{
+    path: 'docs/capabilities.md',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'CAN'), false);
+  assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-adapter-connector' || item.rule === 'unresolved-capability-token'));
+});
+
+test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
+  const content = 'const permission = policy.permission;';
+  const discovery = discoverFiles([{
+    path: 'src/policy.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.mode, 'LEXICAL_FALLBACK');
   assert.equal(discovery.semanticResolution.lexicalFallbackAccepted > 0, true);
 });
