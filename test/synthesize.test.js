@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { analyzeGitHubRepository, analyzeRepository, projectStory } from '../src/index.js';
 
+const PIPELINE = ['DISCOVER', 'EXTRACT', 'CLASSIFY', 'BIND', 'RESOLVE_RELATIONS', 'TRACE_EFFECTS', 'SYNTHESIZE', 'PROJECT'];
+
 async function fixture(files) {
   const root = await mkdtemp(join(tmpdir(), 'avgl-synth-'));
   for (const [path, content] of Object.entries(files)) {
@@ -30,7 +32,7 @@ test('synthesizes repository-specific capability, authority, effect, and evidenc
   t.after(() => rm(root, { recursive: true, force: true }));
 
   const ir = await analyzeRepository(root);
-  assert.deepEqual(ir.analysis.pipeline, ['DISCOVER', 'CLASSIFY', 'BIND', 'SYNTHESIZE', 'PROJECT']);
+  assert.deepEqual(ir.analysis.pipeline, PIPELINE);
   assert.equal(ir.synthesis.mode, 'deterministic-evidence-aggregation');
   assert.match(ir.synthesis.areas.THINK.summary, /OpenAI|model runtime/i);
   assert.match(ir.synthesis.areas.CAN.summary, /MCP|filesystem|browser/i);
@@ -70,5 +72,5 @@ test('GitHub analysis wrapper includes synthesis before projection', async () =>
   const ir = await analyzeGitHubRepository('acme/synth', { fetchImpl });
   assert.equal(ir.synthesis.areas.CAN.status, 'EVIDENCED');
   assert.match(ir.synthesis.areas.CAN.summary, /MCP|browser/i);
-  assert.deepEqual(ir.analysis.pipeline, ['DISCOVER', 'CLASSIFY', 'BIND', 'SYNTHESIZE', 'PROJECT']);
+  assert.deepEqual(ir.analysis.pipeline, PIPELINE);
 });
