@@ -116,6 +116,33 @@ async function walkTree(apiBase, rootSha, options) {
   return entries;
 }
 
+export async function resolveGitHubRevision(input, options = {}) {
+  const parsed = typeof input === 'string' ? parseGitHubRepository(input) : input;
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') throw new Error('No fetch implementation is available.');
+
+  const token = options.token;
+  const apiBase = `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`;
+  const repository = options.repository ?? await expectGitHubJson(fetchImpl, apiBase, token);
+  const requested = options.ref ?? repository.default_branch;
+  if (!requested) throw Object.assign(new Error('The GitHub repository has no resolvable revision.'), { statusCode: 422 });
+
+  const commit = await expectGitHubJson(
+    fetchImpl,
+    `${apiBase}/commits/${encodeURIComponent(requested)}`,
+    token
+  );
+  if (typeof commit.sha !== 'string' || !/^[a-f0-9]{40}$/i.test(commit.sha)) {
+    throw Object.assign(new Error('GitHub did not return an immutable commit SHA.'), { statusCode: 422 });
+  }
+  return {
+    parsed,
+    repository,
+    requestedRef:requested,
+    sha:commit.sha
+  };
+}
+
 export async function fetchCompleteGitHubTree(input, options = {}) {
   const parsed = typeof input === 'string' ? parseGitHubRepository(input) : input;
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;

@@ -65,10 +65,15 @@ export function bindAvglIr(discovery, classificationResult) {
       sourceCoverage: discovery.sourceCoverage,
       skippedSensitive: discovery.skippedSensitive,
       skippedOversize: discovery.skippedOversize,
-      rejectedWeakEvidence: classificationResult.rejectedWeakEvidence.length
+      rejectedWeakEvidence: classificationResult.rejectedWeakEvidence.length,
+      relationCount: discovery.relations?.length ?? 0,
+      effectCount: discovery.effects?.length ?? 0,
+      effectChainCount: discovery.effectChains?.length ?? 0
     },
     nodes,
-    relations: [],
+    relations: discovery.relations ?? [],
+    effects: discovery.effects ?? [],
+    effectChains: discovery.effectChains ?? [],
     unknowns: classificationResult.unknownSemanticClasses,
     invariants: [
       'HARNESS != AUTHORITY',

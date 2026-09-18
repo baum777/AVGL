@@ -3,6 +3,7 @@ import { discoverFiles, isSensitivePath, isTextCandidate, sourceKindForPath } fr
 import { classifyDiscoveries } from './classify.js';
 import { bindAvglIr } from './bind.js';
 import { fetchCompleteGitHubTree, githubHeaders, parseGitHubRepository } from './github-tree.js';
+import { extractRelationFacts, resolveRelations, traceEffectChains } from './relations.js';
 
 const DEFAULT_MAX_FILES = 120;
 const DEFAULT_CONCURRENCY = 10;
@@ -89,12 +90,28 @@ function mergeCoverage(target, source) {
 }
 
 async function fetchCandidateContent(tree, file, options) {
-  const path = file.path.split('/').map(encodeURIComponent).join('/');
-  const rawUrl = `https://raw.githubusercontent.com/${tree.parsed.owner}/${tree.parsed.repo}/${encodeURIComponent(tree.ref)}/${path}`;
   try {
-    const response = await options.fetchImpl(rawUrl, { headers: githubHeaders(options.token, true) });
+    if (!options.token) {
+      const path = file.path.split('/').map(encodeURIComponent).join('/');
+      const rawUrl = `https://raw.githubusercontent.com/${tree.parsed.owner}/${tree.parsed.repo}/${encodeURIComponent(tree.ref)}/${path}`;
+      const response = await options.fetchImpl(rawUrl, {
+        headers: { 'User-Agent': 'AVGL/0.5' }
+      });
+      if (!response.ok) return { file, error: `HTTP ${response.status}` };
+      return { file: { ...file, content: await response.text() }, error: null };
+    }
+
+    const response = await options.fetchImpl(
+      tree.apiBase + '/git/blobs/' + encodeURIComponent(file.sha),
+      { headers: githubHeaders(options.token) }
+    );
     if (!response.ok) return { file, error: `HTTP ${response.status}` };
-    return { file: { ...file, content: await response.text() }, error: null };
+    const payload = await response.json();
+    if (payload.encoding !== 'base64' || typeof payload.content !== 'string') {
+      return { file, error: 'unsupported blob encoding' };
+    }
+    const content = Buffer.from(payload.content.replace(/\n/g, ''), 'base64').toString('utf8');
+    return { file: { ...file, content }, error: null };
   } catch (error) {
     return { file, error: error?.message || 'fetch failed' };
   }
@@ -139,6 +156,7 @@ export async function discoverGitHubRepository(input, options = {}) {
   const observations = [];
   const sourceCoverage = emptyCoverage();
   const contentFetchFailures = [];
+  const relationFacts = [];
   let filesScanned = 0;
   let bytesScanned = 0;
 
@@ -173,8 +191,12 @@ export async function discoverGitHubRepository(input, options = {}) {
 
     filesScanned += batchDiscovery.filesScanned;
     observations.push(...batchDiscovery.observations);
+    relationFacts.push(...loaded.map(extractRelationFacts));
     mergeCoverage(sourceCoverage, batchDiscovery.sourceCoverage);
   }
+
+  const resolvedRelations = resolveRelations(relationFacts, blobs.map((file) => file.path));
+  const effectChains = traceEffectChains(resolvedRelations);
 
   const selectedAllEligible = candidates.length === eligible.length;
   const scanComplete = Boolean(tree.treeComplete) && selectedAllEligible && contentFetchFailures.length === 0;
@@ -183,7 +205,7 @@ export async function discoverGitHubRepository(input, options = {}) {
     : (scanComplete ? 'github-static-baseline' : 'github-static-baseline-partial');
 
   return {
-    source: { kind: 'repository', label: tree.parsed.slug },
+    source: { kind: 'repository', label: tree.parsed.slug, revision: tree.ref, private: Boolean(tree.repository.private) },
     generatedAt: new Date().toISOString(),
     filesSeen: blobs.length,
     filesEligible: eligible.length,
@@ -200,7 +222,10 @@ export async function discoverGitHubRepository(input, options = {}) {
     skippedOversize: oversize.map((file) => file.path),
     contentFetchFailures,
     analysisMode,
-    observations
+    observations,
+    relations: resolvedRelations.relations,
+    effects: resolvedRelations.effects,
+    effectChains
   };
 }
 

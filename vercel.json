@@ -12,6 +12,24 @@
     },
     "api/chat.mjs": {
       "maxDuration": 45
+    },
+    "api/workspace.mjs": {
+      "maxDuration": 300
+    },
+    "api/github-app/install.mjs": {
+      "maxDuration": 20
+    },
+    "api/github-app/callback.mjs": {
+      "maxDuration": 20
+    },
+    "api/github-app/repos.mjs": {
+      "maxDuration": 30
+    },
+    "api/github-app/disconnect.mjs": {
+      "maxDuration": 10
+    },
+    "api/github-app/oauth-callback.mjs": {
+      "maxDuration": 20
     }
   },
   "rewrites": [

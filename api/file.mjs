@@ -1,4 +1,5 @@
 import { fetchRepositoryFile, summarizeRepositoryFile } from '../src/repository-inspect.js';
+import { resolveGitHubAccess } from '../src/github-app-auth.js';
 
 const MAX_BODY_BYTES = 12 * 1024;
 
@@ -16,10 +17,14 @@ export default async function handler(request, response) {
   if (!repository || !path) return response.status(400).json({ error: 'repository and path are required.' });
 
   try {
-    const file = await fetchRepositoryFile(repository, path, { token: process.env.GITHUB_TOKEN || undefined });
-    return response.status(200).json({ file: summarizeRepositoryFile(file) });
+    const access = await resolveGitHubAccess(request, request.body);
+    const file = await fetchRepositoryFile(repository, path, { token: access.token });
+    return response.status(200).json({
+      file: summarizeRepositoryFile(file),
+      sourceAccess: { mode: access.mode, installationId: access.installationId }
+    });
   } catch (error) {
-    const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 422;
+    const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 600 ? error.statusCode : 422;
     return response.status(status).json({ error: error?.message || 'File inspection failed.' });
   }
 }

@@ -58,7 +58,8 @@ export const DETECTORS = Object.freeze([
     confidence: 0.78,
     evidenceState: 'INFERRED',
     patterns: [
-      /\b(executor|execute|dispatch|send|write|commit|push|deploy|mutate|mutation)\b/i
+      /\b(executor|execute|dispatch|send|write|commit|deploy|mutate|mutation)\b/i,
+      /\b(?:git|github|repo|repository|client)\.push\s*\(/i
     ]
   },
   {

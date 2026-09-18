@@ -188,7 +188,7 @@ export async function discoverRepository(rootPath = '.', options = {}) {
   }
 
   const eligible = files.filter((file) => !isSensitivePath(file.path) && isTextCandidate(file.path) && (file.size ?? 0) <= maxFileBytes);
-  return discoverFiles(files, {
+  const discovery = discoverFiles(files, {
     kind: 'repository',
     label: basename(root)
   }, {
@@ -198,4 +198,13 @@ export async function discoverRepository(rootPath = '.', options = {}) {
     scanComplete: true,
     analysisMode: 'deterministic-static-baseline'
   });
+  discovery.transientFiles = files.filter((file) => typeof file.content === 'string');
+  discovery.scanStrategy = 'full';
+  discovery.filesSelected = discovery.filesScanned;
+  discovery.bytesScanned = discovery.transientFiles.reduce((sum, file) => sum + (file.size ?? Buffer.byteLength(file.content, 'utf8')), 0);
+  discovery.treeComplete = true;
+  discovery.treeFallbackUsed = false;
+  discovery.unsupportedFileCount = Math.max(0, paths.length - eligible.length - discovery.skippedSensitive.length - discovery.skippedOversize.length);
+  discovery.contentFetchFailures = [];
+  return discovery;
 }
