@@ -5,6 +5,7 @@ import { classifyDiscoveries, discoverFiles } from '../src/index.js';
 
 const canonicalCanvasFixture = new URL('./fixtures/semantic-resolution/canvas-context-negative.mjs', import.meta.url);
 const canonicalWhoNegativeFixture = new URL('./fixtures/semantic-resolution/who-non-agent-negative.mjs', import.meta.url);
+const canonicalThinkNegativeFixture = new URL('./fixtures/semantic-resolution/think-non-cognition-negative.mjs', import.meta.url);
 
 test('canonical negative fixture rejects Canvas 2D context as agentic KNOW evidence', async () => {
   const content = await readFile(canonicalCanvasFixture, 'utf8');
@@ -117,16 +118,105 @@ test('generic worker or role tokens fail closed without agentic support', () => 
   assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-actor-token'));
 });
 
-test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
-  const content = `const model = openai.model('reasoning');`;
+test('canonical THINK negative fixture rejects ORM models, route planners, project planning, and generic reasoning prose', async () => {
+  const content = await readFile(canonicalThinkNegativeFixture, 'utf8');
   const discovery = discoverFiles([{
-    path: 'src/model.mjs',
+    path: 'src/domain/planning.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const think = discovery.observations.filter((item) => item.candidateClass === 'THINK');
+  assert.equal(think.length, 0);
+
+  const rules = new Set(
+    discovery.semanticRejections
+      .filter((item) => item.candidateClass === 'THINK')
+      .map((item) => item.rule)
+  );
+
+  assert.equal(rules.has('data-or-orm-model'), true);
+  assert.equal(rules.has('generic-planner-class'), true);
+  assert.equal(rules.has('non-agentic-planning'), true);
+  assert.equal(rules.has('unresolved-cognition-token'), true);
+});
+
+test('THINK accepts explicit LLM invocation and preserves semantic provenance', () => {
+  const content = [
+    'const response = await openai.responses.create({',
+    "  model: 'gpt-5.6',",
+    '  input: messages',
+    '});'
+  ].join('\n');
+
+  const discovery = discoverFiles([{
+    path: 'runtime/model/openai-adapter.mjs',
     content,
     size: Buffer.byteLength(content, 'utf8')
   }]);
 
   const think = discovery.observations.find((item) => item.candidateClass === 'THINK');
   assert.ok(think);
-  assert.equal(think.semanticResolution.mode, 'LEXICAL_FALLBACK');
+  assert.equal(think.semanticResolution.mode, 'SEMANTIC');
+  assert.equal(think.semanticResolution.resolver, 'think.cognition.v1');
+  assert.equal(think.semanticResolution.rule, 'llm-model-invocation');
+});
+
+test('THINK accepts recognized LLM model configuration', () => {
+  const content = "export const runtime = { model: 'claude-sonnet-4-5' };";
+  const discovery = discoverFiles([{
+    path: 'runtime/model/config.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const think = discovery.observations.find((item) => item.candidateClass === 'THINK');
+  assert.ok(think);
+  assert.equal(think.semanticResolution.resolver, 'think.cognition.v1');
+  assert.equal(think.semanticResolution.rule, 'explicit-llm-model-config');
+});
+
+test('THINK accepts planning only when coupled to agentic runtime semantics', () => {
+  const content = [
+    'export function planner(agent, workflow, model) {',
+    '  return planning({ agent, workflow, model, prompt: agent.prompt });',
+    '}'
+  ].join('\n');
+
+  const discovery = discoverFiles([{
+    path: 'runtime/planner/agent-planner.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const think = discovery.observations.find((item) => item.candidateClass === 'THINK');
+  assert.ok(think);
+  assert.equal(think.semanticResolution.resolver, 'think.cognition.v1');
+  assert.equal(think.semanticResolution.rule, 'agentic-cognition-orchestration');
+});
+
+test('generic model tokens fail closed without LLM/runtime support', () => {
+  const content = 'const model = catalog.model;';
+  const discovery = discoverFiles([{
+    path: 'src/catalog.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'THINK'), false);
+  assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-model-token'));
+});
+
+test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
+  const content = 'const tools = registerTools();';
+  const discovery = discoverFiles([{
+    path: 'src/tools.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const can = discovery.observations.find((item) => item.candidateClass === 'CAN');
+  assert.ok(can);
+  assert.equal(can.semanticResolution.mode, 'LEXICAL_FALLBACK');
   assert.equal(discovery.semanticResolution.lexicalFallbackAccepted > 0, true);
 });
