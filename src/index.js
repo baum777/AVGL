@@ -13,6 +13,7 @@ export { discoverRepository, discoverFiles, sourceKindForPath } from './discover
 export { classifyDiscoveries } from './classify.js';
 export { bindAvglIr } from './bind.js';
 export { synthesizeAvglIr } from './synthesize.js';
+export { extractRelationFacts, resolveRelations, traceEffectChains, buildRelationModel } from './relations.js';
 export { discoverGitHubRepository, parseGitHubRepository, selectGitHubCandidates };
 export { projectStory, projectHarnessCard, projectJson } from './project.js';
 export { SEMANTIC_CLASSES, EVIDENCE_STATES, HUMAN_LABELS } from './constants.js';
