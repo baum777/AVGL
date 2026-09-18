@@ -14,6 +14,8 @@ function areaFor(c){return state.ir?.synthesis?.areas?.[c]||null}
 function famLabel(f){return state.locale==="de"?(FAMILY_DE[f.id]||f.label):f.label}
 function summary(c){const a=areaFor(c),n=nodeFor(c);if(!a||a.status!=="EVIDENCED")return t("notFound");const labels=(a.families||[]).map(famLabel);return (PREFIX[state.locale][c]||c)+": "+(labels.length?labels.join(", "):(n?.label||"bounded signals"))+"."}
 function fmtBytes(v){v=Number(v||0);return v<1024?v+" B":v<1048576?(v/1024).toFixed(1)+" KB":(v/1048576).toFixed(1)+" MB"}
+const ASSET_ROOT="/assets/";
+function assetIcon(path,cls="avgl-inline-icon",alt=""){const img=document.createElement("img");img.className=cls;img.src=ASSET_ROOT+path;img.alt=alt;img.setAttribute("aria-hidden",alt?"false":"true");return img}
 function chip(text,cls=""){return el("span","chip "+cls,text)}
 function applyLocale(){
  document.documentElement.lang=state.locale;$("#lang-toggle").textContent=state.locale==="de"?"EN":"DE";
@@ -39,7 +41,7 @@ function familyRow(a){const r=el("div","family-row");(a.families||[]).forEach(f=
 function sourceText(n){const kinds=[...new Set((n.evidence||[]).map(e=>e.sourceKind).filter(Boolean))];return t("source")+": "+(kinds.join(", ")||"unknown")}
 function renderInspect(){
  const host=$("#inspect-view");host.replaceChildren(el("div","notice",t("evidenceIntro")));const grid=el("div","inspect-grid");
- for(const c of ["WHO","KNOW","THINK","CAN","MAY","ACT","DID"]){const n=nodeFor(c),card=el("article","inspect-card"),head=el("div","inspect-head");head.append(el("div","token",c),chip(n?.evidenceState||"UNKNOWN"));card.append(head,el("h3","",Q[state.locale][c]),el("p","",summary(c)));if(n?.evidence?.length){const d=el("details"),shown=n.evidence.length,total=n.evidenceCount??shown,s=el("summary","",shown===total?total+" evidence refs":shown+" / "+total+" evidence refs shown"),list=el("div","evidence-list");d.append(s);n.evidence.forEach(e=>{const item=el("div","evidence-item"),b=el("button","evidence-link",e.path+":"+e.line);b.onclick=()=>{selectView("files");loadFile(e.path)};item.append(b,chip(e.sourceKind||"unknown"),el("code","",e.snippet||""));list.append(item)});d.append(list);card.append(d)}grid.append(card)}host.append(grid)
+ for(const c of ["WHO","KNOW","THINK","CAN","MAY","ACT","DID"]){const n=nodeFor(c),card=el("article","inspect-card"),head=el("div","inspect-head");head.append(assetIcon("04_iconography/lenses/avgl-evidence.svg","inspect-lens-icon"),el("div","token",c),chip(n?.evidenceState||"UNKNOWN"));card.append(head,el("h3","",Q[state.locale][c]),el("p","",summary(c)));if(n?.evidence?.length){const d=el("details"),shown=n.evidence.length,total=n.evidenceCount??shown,s=el("summary","",shown===total?total+" evidence refs":shown+" / "+total+" evidence refs shown"),list=el("div","evidence-list");d.append(s);n.evidence.forEach(e=>{const item=el("div","evidence-item"),b=el("button","evidence-link",e.path+":"+e.line);b.onclick=()=>{selectView("files");loadFile(e.path)};item.append(b,chip(e.sourceKind||"unknown"),el("code","",e.snippet||""));list.append(item)});d.append(list);card.append(d)}grid.append(card)}host.append(grid)
 }
 function renderSystem(){const h=$("#system-view");h.replaceChildren(el("div","notice",t("systemNote")));const s=el("div","system-story");s.append(band("WHO · KNOW · THINK",state.locale==="de"?"Agent-Plane":"Agent plane",summary("WHO")+" · "+summary("KNOW")+" · "+summary("THINK")),arrow(),band("PROPOSAL",state.locale==="de"?"Intent verlässt Cognition":"Intent leaves cognition",state.locale==="de"?"Ein Model-Vorschlag ist noch keine Authority oder externer Effect.":"A model proposal is not yet authority or an external effect."),boundary());const p=el("div","system-pair");p.append(band("CAN",summary("CAN"),t("canMay")),band("MAY",summary("MAY"),t("canMay")));s.append(p,arrow(),band("ACT",summary("ACT"),t("actDid")),arrow(),band("DID",summary("DID"),t("actDid")));h.append(s)}
 function band(tok,title,copy){const b=el("div","system-band");b.append(el("span","token",tok),el("h3","",title),el("p","",copy));return b}function arrow(){return el("div","system-arrow","↓")}function boundary(){return el("div","system-boundary",state.locale==="de"?"Authority Boundary":"Authority boundary")}
@@ -50,7 +52,7 @@ document.querySelectorAll(".view-tab").forEach(b=>b.onclick=()=>selectView(b.dat
 
 function buildTree(files){const root={dirs:new Map,files:[]};for(const file of files){let n=root;const parts=file.path.split("/");parts.forEach((p,i)=>{if(i===parts.length-1)n.files.push(file);else{if(!n.dirs.has(p))n.dirs.set(p,{name:p,dirs:new Map,files:[]});n=n.dirs.get(p)}})}return root}
 function countTree(n){let c=n.files.length;for(const d of n.dirs.values())c+=countTree(d);return c}
-function renderTreeNode(n,host,depth=0){[...n.dirs.values()].sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{const details=el("details","tree-folder");if(depth<1)details.open=true;const s=el("summary","tree-folder-summary");s.append(el("span","chev","›"),el("span","",d.name),chip(String(countTree(d))));details.append(s);const ch=el("div","tree-children");renderTreeNode(d,ch,depth+1);details.append(ch);host.append(details)});n.files.sort((a,b)=>a.path.localeCompare(b.path)).forEach(f=>{const b=el("button","tree-file"+(state.activeFile===f.path?" active":""),f.path.split("/").pop());b.title=f.path;const meta=el("span","file-meta");meta.append(el("i","kind-dot "+f.sourceKind));if(evidencePaths().has(f.path))meta.append(el("b","evmark","E"));b.append(meta);b.onclick=()=>loadFile(f.path);host.append(b)})}
+function renderTreeNode(n,host,depth=0){[...n.dirs.values()].sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{const details=el("details","tree-folder");if(depth<1)details.open=true;const s=el("summary","tree-folder-summary");s.append(el("span","chev","›"),assetIcon("04_iconography/ui/avgl-folder.svg","tree-node-icon"),el("span","tree-node-label",d.name),chip(String(countTree(d))));details.append(s);const ch=el("div","tree-children");renderTreeNode(d,ch,depth+1);details.append(ch);host.append(details)});n.files.sort((a,b)=>a.path.localeCompare(b.path)).forEach(f=>{const b=el("button","tree-file"+(state.activeFile===f.path?" active":""));b.title=f.path;const meta=el("span","file-meta");meta.append(el("i","kind-dot "+f.sourceKind));if(evidencePaths().has(f.path))meta.append(assetIcon("04_iconography/lenses/avgl-evidence.svg","evidence-node-icon"));b.append(assetIcon("04_iconography/ui/avgl-file.svg","tree-node-icon"),el("span","tree-node-label",f.path.split("/").pop()),meta);b.onclick=()=>loadFile(f.path);host.append(b)})}
 function evidencePaths(){return new Set((state.ir?.nodes||[]).flatMap(n=>(n.evidence||[]).map(e=>e.path)))}
 function renderTree(){if(!state.inventory)return;const q=$("#file-search").value.trim().toLowerCase(),all=state.inventory.files||[],files=q?all.filter(f=>f.path.toLowerCase().includes(q)):all;$("#file-count").textContent=files.length+" "+t("fileCount");const h=$("#file-tree");h.replaceChildren();renderTreeNode(buildTree(files),h);$("#tree-warning").hidden=!state.inventory.treeTruncated;if(state.inventory.treeTruncated)$("#tree-warning").textContent=state.locale==="de"?"GitHub lieferte einen gekürzten Repository-Tree.":"GitHub returned a truncated repository tree."}
 $("#file-search").oninput=renderTree;
@@ -64,7 +66,7 @@ function relationPeer(rel,path){
 }
 function relationRow(rel,path){
  const peer=relationPeer(rel,path),row=el("div","relation-row"),top=el("div","relation-row-head");
- top.append(el("span","relation-type",rel.type),chip(rel.basis||"UNKNOWN"));
+ top.append(assetIcon("04_iconography/ui/avgl-relation.svg","relation-row-icon"),el("span","relation-type",rel.type),chip(rel.basis||"UNKNOWN"));
  row.append(top,el("div","relation-target",peer?.id||"—"));
  if(peer?.kind==="file"){row.classList.add("clickable");row.onclick=()=>loadFile(peer.id)}
  const ev=rel.evidence?.[0];if(ev)row.append(el("div","relation-evidence",ev.path+":"+ev.line));
@@ -72,7 +74,7 @@ function relationRow(rel,path){
 }
 function effectRow(effect){
  const row=el("div","relation-row effect "+(effect.external?"external":"local")),top=el("div","relation-row-head");
- top.append(el("span","relation-type",effect.external?t("externalEffect"):t("localMutation")),chip(effect.effectKind));
+ top.append(assetIcon("04_iconography/core/avgl-flow.svg","relation-row-icon"),el("span","relation-type",effect.external?t("externalEffect"):t("localMutation")),chip(effect.effectKind));
  row.append(top,el("div","relation-target",effect.callee||effect.effectKind),el("div","relation-evidence",(effect.evidence?.path||"")+":"+String(effect.evidence?.line||"")));
  return row
 }
@@ -174,9 +176,9 @@ if(params.get("github")==="connected"){history.replaceState({},document.title,lo
 
 setScanStrategy("full");setSourceMode("public");applyLocale();renderSuggestions();renderWorkspaceSelected();updateAssistantContext();
 
-// Brand asset library — materialized from the canonical ZIP at build time.
-const BRAND_ASSET_PREFIX="AVGL_FULL_ASSET_PACKAGE/";
-const BRAND_STATIC_ROOT="/assets/brand/";
+// Brand asset library — served directly from committed web/assets/*.
+const BRAND_ASSET_PREFIX="";
+const BRAND_STATIC_ROOT="/assets/";
 const assetLibrary=$("#asset-library");
 let assetLibraryLoaded=false;
 function brandAssetUrl(path){
@@ -203,7 +205,7 @@ async function loadAssetLibrary(){
   try{
     const r=await fetch(BRAND_STATIC_ROOT+"manifest.json"),manifest=await r.json();
     if(!r.ok)throw Error("Asset manifest unavailable");
-    const files=[...(manifest.files||[]).map(file=>({name:BRAND_ASSET_PREFIX+file.path})),{name:BRAND_ASSET_PREFIX+"manifest.json"},{name:BRAND_ASSET_PREFIX+"manifest.txt"}];
+    const files=[...(manifest.files||[]).map(file=>({name:file.path})),{name:"manifest.json"},{name:"manifest.txt"}];
     count.textContent=files.length+" bundled assets";
     host.replaceChildren();
     files.forEach(file=>host.append(assetCard(file)));
