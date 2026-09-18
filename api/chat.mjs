@@ -4,6 +4,17 @@ const MAX_BODY_BYTES = 96 * 1024;
 const MAX_QUESTION_CHARS = 5000;
 const MAX_HISTORY_MESSAGES = 8;
 const MAX_HISTORY_CHARS = 5000;
+const DEFAULT_FREE_MODELS = [
+  'inclusionai/ling-3.0-flash-vl:free',
+  'nex-agi/nex-n2.5-pro:free',
+  'nvidia/nemotron-3.5-lightning:free'
+];
+
+function openRouterModels() {
+  const configured = process.env.OPENROUTER_MODEL?.trim();
+  if (!configured) return DEFAULT_FREE_MODELS;
+  return [configured, ...DEFAULT_FREE_MODELS.filter((model) => model !== configured)];
+}
 
 function boundedHistory(history) {
   if (!Array.isArray(history)) return [];
@@ -89,6 +100,7 @@ export default async function handler(request, response) {
       `Relevant source excerpts:\n${fileContext || '(No relevant file content could be loaded.)'}`
     ].join('\n\n');
 
+    const models = openRouterModels();
     const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -98,7 +110,7 @@ export default async function handler(request, response) {
         'X-Title': 'AVGL Repository Assistant'
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'openrouter/auto',
+        models,
         messages: [
           { role: 'system', content: system },
           ...boundedHistory(request.body?.history),
@@ -115,7 +127,7 @@ export default async function handler(request, response) {
     }
     const answer = payload?.choices?.[0]?.message?.content;
     if (typeof answer !== 'string' || !answer.trim()) return response.status(502).json({ error: 'OpenRouter returned no answer.' });
-    return response.status(200).json({ answer: answer.trim(), model: payload.model || process.env.OPENROUTER_MODEL || 'openrouter/auto' });
+    return response.status(200).json({ answer: answer.trim(), model: payload.model || models[0] });
   } catch (error) {
     const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 422;
     return response.status(status).json({ error: error?.message || 'Assistant request failed.' });
