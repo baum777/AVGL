@@ -14,7 +14,9 @@
       <span>AVGL</span>
     </a>
     <div class="header-actions">
-      <div class="header-meta"><span class="status-dot" aria-hidden="true"></span><span>v0.2 · evidence-bound</span></div>
+      <div class="header-meta"><span class="status-dot" aria-hidden="true"></span><span>v0.5 · evidence-bound</span></div>
+      <button id="workspace-toggle" class="lang-toggle" type="button" data-i18n="workspace">Workspace</button>
+      <button id="github-connect" class="lang-toggle" type="button" data-i18n="connectGitHub">Connect GitHub</button>
       <button id="lang-toggle" class="lang-toggle" type="button" aria-label="Switch language">DE</button>
     </div>
   </header>
@@ -23,13 +25,24 @@
     <section class="hero" aria-labelledby="hero-title">
       <p class="eyebrow">Agent Visual Grammar Language</p>
       <h1 id="hero-title"><span data-i18n="heroLine1">Understand the agent.</span><br><span class="muted-headline" data-i18n="heroLine2">Not the graph.</span></h1>
-      <p class="hero-copy" data-i18n="heroCopy">Paste a public GitHub repository. AVGL maps bounded source evidence into a readable system story, a hierarchical repository view, and an evidence-aware assistant.</p>
+      <p class="hero-copy" data-i18n="heroCopy">Analyze public repositories directly or connect GitHub for user-scoped private repositories. AVGL maps evidence into readable system stories, repository relations, and cross-repository workspaces.</p>
 
       <form id="analyze-form" class="repo-form">
         <label for="repository" data-i18n="repoLabel">GitHub repository</label>
-        <div class="input-row">
+        <div class="source-mode-row">
+          <div class="scan-mode-toggle" role="group" aria-label="Repository source">
+            <button id="source-public" class="scan-mode-button active" type="button" data-source-mode="public" data-i18n="publicRepo">Public URL</button>
+            <button id="source-private" class="scan-mode-button" type="button" data-source-mode="github_app" data-i18n="privateRepo">Private GitHub</button>
+          </div>
+          <span id="github-user-status" class="scan-mode-hint" data-i18n="publicMode">Public repository mode</span>
+        </div>
+        <div id="public-repo-input" class="input-row">
           <input id="repository" name="repository" type="text" inputmode="url" autocomplete="off" placeholder="github.com/owner/repository" required>
           <button id="analyze-button" class="primary-button" type="submit" data-i18n="analyze">Analyze</button>
+        </div>
+        <div id="private-repo-input" class="private-repo-input" hidden>
+          <select id="private-repository" aria-label="Private repository"></select>
+          <button id="analyze-private-button" class="primary-button" type="button" data-i18n="analyze">Analyze</button>
         </div>
         <div class="scan-mode-row">
           <span class="scan-mode-label" data-i18n="scanModeLabel">Scan mode</span>
@@ -40,11 +53,40 @@
           <span id="scan-mode-hint" class="scan-mode-hint" data-i18n="scanFullHint">Scans every eligible text/code file in the complete Git tree.</span>
         </div>
         <div class="form-foot">
-          <p data-i18n="repoHelp">v0.2 analyzes public GitHub repositories. Private repository auth is not enabled yet.</p>
+          <p data-i18n="repoHelp">Public repositories work directly. Private repositories require a verified GitHub App user session.</p>
         </div>
       </form>
       <div id="status" class="status" role="status" aria-live="polite"></div>
       <div id="error" class="error" role="alert" hidden></div>
+    </section>
+
+    <section id="workspace-panel" class="result workspace-panel" hidden aria-live="polite">
+      <div class="result-head">
+        <div>
+          <p class="eyebrow">AVGL Workspace</p>
+          <h2 data-i18n="workspaceTitle">Cross-repository workspace</h2>
+          <p class="workspace-copy" data-i18n="workspaceIntro">Analyze up to eight repositories at immutable revisions and derive evidence-bound cross-repository relations.</p>
+        </div>
+        <button id="workspace-close" class="icon-button" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="workspace-add-row">
+        <input id="workspace-repo-input" type="text" placeholder="owner/repository">
+        <button id="workspace-add" class="lang-toggle" type="button" data-i18n="addRepo">Add repository</button>
+      </div>
+      <div id="workspace-connected" class="workspace-connected" hidden>
+        <p class="workspace-label" data-i18n="connectedRepos">Connected GitHub repositories</p>
+        <div id="workspace-repo-options" class="workspace-repo-options"></div>
+      </div>
+      <div>
+        <p class="workspace-label" data-i18n="selectedRepos">Selected repositories</p>
+        <div id="workspace-selected" class="workspace-selected"></div>
+      </div>
+      <div class="workspace-actions">
+        <span id="workspace-status" class="scan-mode-hint"></span>
+        <button id="workspace-analyze" class="primary-button" type="button" data-i18n="analyzeWorkspace">Analyze workspace</button>
+      </div>
+      <div id="workspace-error" class="error" hidden></div>
+      <div id="workspace-result" class="workspace-result" hidden></div>
     </section>
 
     <section id="result" class="result" hidden aria-live="polite">
@@ -125,7 +167,7 @@
     </section>
   </main>
 
-  <footer><span>AVGL v0.2</span><span>DISCOVER → CLASSIFY → BIND → SYNTHESIZE → PROJECT</span></footer>
+  <footer><span>AVGL v0.5</span><span>DISCOVER → EXTRACT → CLASSIFY → BIND → RESOLVE RELATIONS → TRACE EFFECTS → SYNTHESIZE → PROJECT</span></footer>
 
   <button id="assistant-fab" class="assistant-fab" type="button" aria-haspopup="dialog" aria-controls="assistant-panel">
     <span class="assistant-fab-icon">✦</span><span data-i18n="askAvgl">Ask AVGL</span>

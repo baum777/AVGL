@@ -27,9 +27,9 @@ function fullTreeFetch(url) {
       { type: 'blob', path: 'policy.ts', size: 70, sha: 'policy-blob' }
     ] }));
   }
-  if (url.endsWith('/root.js')) return Promise.resolve(textResponse('export const tool = browser;'));
-  if (url.endsWith('/src/agent.js')) return Promise.resolve(textResponse('const agent = { model: "llm", tools: [browser] }; executor.dispatch("task");'));
-  if (url.endsWith('/src/policy.ts')) return Promise.resolve(textResponse('export const policy = { permission: "read", scope: "repo" }; verify("receipt");'));
+  if (url.endsWith('/git/blobs/root-blob')) return Promise.resolve(jsonResponse({ encoding:'base64', content:Buffer.from('export const tool = browser;').toString('base64') }));
+  if (url.endsWith('/git/blobs/agent-blob')) return Promise.resolve(jsonResponse({ encoding:'base64', content:Buffer.from('const agent = { model: "llm", tools: [browser] }; executor.dispatch("task");').toString('base64') }));
+  if (url.endsWith('/git/blobs/policy-blob')) return Promise.resolve(jsonResponse({ encoding:'base64', content:Buffer.from('export const policy = { permission: "read", scope: "repo" }; verify("receipt");').toString('base64') }));
   throw new Error(`Unexpected URL: ${url}`);
 }
 
@@ -76,7 +76,7 @@ test('bounded scanner keeps weighted slot limit and reports incomplete coverage'
 
 test('full scanner fails closed when an eligible file cannot be fetched', async () => {
   const failingFetch = async (url, options) => {
-    if (url.endsWith('/src/policy.ts')) return textResponse('not found', 404);
+    if (url.endsWith('/git/blobs/policy-blob')) return jsonResponse({ message:'not found' }, 404);
     return fullTreeFetch(url, options);
   };
   const discovery = await discoverGitHubRepository('acme/full', {

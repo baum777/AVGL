@@ -35,10 +35,15 @@ export default async function handler(request, response) {
   }
 
   try {
-    const access = await resolveGitHubAccess(request, request.body);
     const scanStrategy = request.body?.scanStrategy === 'bounded' ? 'bounded' : 'full';
+    const needsPrivate = repositories.some((entry) => entry?.accessMode === 'github_app');
+    const publicAccess = await resolveGitHubAccess(request, { accessMode:'public' });
+    const privateAccess = needsPrivate
+      ? await resolveGitHubAccess(request, { accessMode:'github_app' })
+      : null;
 
     const entries = await mapConcurrent(repositories, 2, async (entry, index) => {
+      const access = entry?.accessMode === 'github_app' ? privateAccess : publicAccess;
       const repository = typeof entry?.repository === 'string' ? entry.repository.trim() : '';
       if (!repository) throw Object.assign(new Error('Repository entry ' + index + ' is missing repository.'), { statusCode: 400 });
 
@@ -80,8 +85,8 @@ export default async function handler(request, response) {
       relations: Array.isArray(request.body?.relations) ? request.body.relations : []
     });
     workspace.sourceAccess = {
-      mode: access.mode,
-      installationId: access.installationId,
+      mode: needsPrivate ? 'mixed_or_github_app' : 'public',
+      installationId: privateAccess?.installationId ?? null,
       rawSourcePersisted: false
     };
 

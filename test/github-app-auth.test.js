@@ -1,51 +1,62 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
 import {
-  createGitHubAppJwt,
-  createInstallationSession,
+  createOAuthState,
   createSignedToken,
-  mintInstallationToken,
-  verifySignedToken
+  createUserSession,
+  openSealedToken,
+  verifySignedToken,
+  verifyUserInstallationAccess
 } from '../src/github-app-auth.js';
 
-test('signed session token verifies and expires fail-closed', () => {
-  const secret = 'test-secret';
-  const token = createSignedToken({ type:'x', exp:200 }, secret);
-  assert.equal(verifySignedToken(token, secret, 100)?.type, 'x');
-  assert.equal(verifySignedToken(token, secret, 201), null);
-  assert.equal(verifySignedToken(token + 'tamper', secret, 100), null);
+test('signed state rejects tampering and expiry', () => {
+  const secret='test-secret';
+  const token=createSignedToken({type:'x',exp:200},secret);
+  assert.equal(verifySignedToken(token,secret,100)?.type,'x');
+  assert.equal(verifySignedToken(token,secret,201),null);
+  assert.equal(verifySignedToken(token+'x',secret,100),null);
 });
 
-test('installation session binds a numeric installation id', () => {
-  const token = createInstallationSession(42, 'secret', { nowSeconds:100, ttlSeconds:60 });
-  const payload = verifySignedToken(token, 'secret', 120);
-  assert.equal(payload.installationId, 42);
-  assert.equal(payload.type, 'github_app_installation');
+test('OAuth state binds installation id and return path', () => {
+  const state=createOAuthState(42,'secret',{nowSeconds:100,ttlSeconds:60,returnTo:'/private'});
+  const payload=verifySignedToken(state,'secret',120);
+  assert.equal(payload.installationId,42);
+  assert.equal(payload.type,'github_app_user_oauth_state');
+  assert.equal(payload.returnTo,'/private');
 });
 
-test('GitHub App JWT is RS256 signed and installation token mint is server-side', async () => {
-  const { privateKey } = generateKeyPairSync('rsa', { modulusLength:2048 });
-  const pem = privateKey.export({ type:'pkcs8', format:'pem' });
-  const jwt = createGitHubAppJwt({ appId:'123', privateKey:pem, nowSeconds:1000 });
-  assert.equal(jwt.split('.').length, 3);
+test('user session encrypts GitHub access token and expires fail-closed', () => {
+  const session=createUserSession({
+    installationId:77,
+    accessToken:'github-user-token-secret',
+    expiresIn:7200,
+    user:{id:1,login:'octocat'}
+  },'session-secret',{nowSeconds:100,ttlSeconds:300});
+  assert.doesNotMatch(session.token,/github-user-token-secret/);
+  const opened=openSealedToken(session.token,'session-secret',120);
+  assert.equal(opened.installationId,77);
+  assert.equal(opened.accessToken,'github-user-token-secret');
+  assert.equal(opened.user.login,'octocat');
+  assert.equal(openSealedToken(session.token,'session-secret',401),null);
+  assert.equal(openSealedToken(session.token+'x','session-secret',120),null);
+});
 
-  let authorization = '';
-  const result = await mintInstallationToken(77, {
-    appId:'123',
-    privateKey:pem,
-    nowSeconds:1000,
-    fetchImpl:async (url, options) => {
-      authorization = options.headers.Authorization;
-      assert.match(url, /installations\/77\/access_tokens$/);
-      return {
-        ok:true,
-        status:201,
-        async json(){ return { token:'installation-token', expires_at:'2026-09-18T03:00:00Z', permissions:{ contents:'read' } }; }
-      };
+test('installation verification uses user-scoped GitHub endpoints', async () => {
+  const seen=[];
+  const fetchImpl=async (url,options)=>{
+    seen.push({url,authorization:options?.headers?.Authorization});
+    if(url==='https://api.github.com/user'){
+      return {ok:true,status:200,async json(){return {id:1,login:'octocat',avatar_url:'https://example.test/a.png'}}};
     }
-  });
-  assert.match(authorization, /^Bearer /);
-  assert.equal(result.token, 'installation-token');
-  assert.equal(result.permissions.contents, 'read');
+    if(url.includes('/user/installations/77/repositories')){
+      return {ok:true,status:200,async json(){return {repositories:[
+        {id:11,full_name:'octocat/private-a',private:true,default_branch:'main',permissions:{pull:true}}
+      ]}}};
+    }
+    throw new Error('Unexpected URL '+url);
+  };
+  const result=await verifyUserInstallationAccess(77,'user-token',{fetchImpl});
+  assert.equal(result.user.login,'octocat');
+  assert.deepEqual(result.repositories.map(r=>r.fullName),['octocat/private-a']);
+  assert.equal(seen.every(x=>x.authorization==='Bearer user-token'),true);
 });

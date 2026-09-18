@@ -1,4 +1,12 @@
-import { createHmac, createSign, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  createSign,
+  randomBytes,
+  timingSafeEqual
+} from 'node:crypto';
 
 const DEFAULT_SESSION_TTL_SECONDS = 3600;
 const DEFAULT_STATE_TTL_SECONDS = 600;
@@ -34,6 +42,19 @@ function normalizePrivateKey(value) {
   return String(value ?? '').replace(/\\n/g, '\n').trim();
 }
 
+function sessionKey(secret) {
+  if (!secret) throw new Error('A session secret is required.');
+  return createHash('sha256').update(String(secret)).digest();
+}
+
+function normalizeOrigin(value) {
+  const url = new URL(String(value ?? ''));
+  if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
+    throw new Error('AVGL_PUBLIC_ORIGIN must use HTTPS.');
+  }
+  return url.origin;
+}
+
 export function createSignedToken(payload, secret) {
   if (!secret) throw new Error('A signing secret is required.');
   const encoded = base64url(JSON.stringify(payload));
@@ -57,6 +78,32 @@ export function verifySignedToken(token, secret, nowSeconds = Math.floor(Date.no
   return payload;
 }
 
+export function createSealedToken(payload, secret) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', sessionKey(secret), iv);
+  const plaintext = Buffer.from(JSON.stringify(payload), 'utf8');
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [iv, ciphertext, tag].map((part) => part.toString('base64url')).join('.');
+}
+
+export function openSealedToken(token, secret, nowSeconds = Math.floor(Date.now() / 1000)) {
+  if (!token || !secret) return null;
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const [iv, ciphertext, tag] = parts.map((part) => Buffer.from(part, 'base64url'));
+    const decipher = createDecipheriv('aes-256-gcm', sessionKey(secret), iv);
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    const payload = JSON.parse(plaintext.toString('utf8'));
+    if (typeof payload.exp === 'number' && payload.exp < nowSeconds) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export function createInstallState(secret, options = {}) {
   const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   return createSignedToken({
@@ -68,22 +115,48 @@ export function createInstallState(secret, options = {}) {
   }, secret);
 }
 
-export function createInstallationSession(installationId, secret, options = {}) {
+export function createOAuthState(installationId, secret, options = {}) {
   const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   const numericId = Number(installationId);
   if (!Number.isSafeInteger(numericId) || numericId <= 0) throw new Error('Invalid GitHub installation ID.');
   return createSignedToken({
-    type: 'github_app_installation',
+    type: 'github_app_user_oauth_state',
     installationId: numericId,
+    nonce: randomBytes(18).toString('base64url'),
     iat: now,
-    exp: now + (options.ttlSeconds ?? DEFAULT_SESSION_TTL_SECONDS)
+    exp: now + (options.ttlSeconds ?? DEFAULT_STATE_TTL_SECONDS),
+    returnTo: options.returnTo ?? '/'
   }, secret);
 }
 
-export function readInstallationSession(request, secret) {
+export function createUserSession(session, secret, options = {}) {
+  const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
+  const installationId = Number(session?.installationId);
+  if (!Number.isSafeInteger(installationId) || installationId <= 0) throw new Error('Invalid GitHub installation ID.');
+  if (typeof session?.accessToken !== 'string' || !session.accessToken) throw new Error('GitHub user access token is required.');
+
+  const tokenTtl = Number.isFinite(session.expiresIn)
+    ? Math.max(60, Math.floor(session.expiresIn) - 60)
+    : DEFAULT_SESSION_TTL_SECONDS;
+  const ttl = Math.min(options.ttlSeconds ?? DEFAULT_SESSION_TTL_SECONDS, tokenTtl);
+
+  return {
+    token:createSealedToken({
+      type:'github_app_user_session',
+      installationId,
+      accessToken:session.accessToken,
+      user:session.user ?? null,
+      iat:now,
+      exp:now + ttl
+    }, secret),
+    ttl
+  };
+}
+
+export function readUserSession(request, secret) {
   const cookies = parseCookies(request?.headers?.cookie ?? request?.headers?.Cookie ?? '');
-  const payload = verifySignedToken(cookies.avgl_github_installation, secret);
-  if (!payload || payload.type !== 'github_app_installation') return null;
+  const payload = openSealedToken(cookies.avgl_github_user_session, secret);
+  if (!payload || payload.type !== 'github_app_user_session') return null;
   return payload;
 }
 
@@ -91,7 +164,14 @@ export function readInstallState(request, secret) {
   const cookies = parseCookies(request?.headers?.cookie ?? request?.headers?.Cookie ?? '');
   const payload = verifySignedToken(cookies.avgl_github_state, secret);
   if (!payload || payload.type !== 'github_app_install_state') return null;
-  return { token: cookies.avgl_github_state, payload };
+  return { token:cookies.avgl_github_state, payload };
+}
+
+export function readOAuthState(request, secret) {
+  const cookies = parseCookies(request?.headers?.cookie ?? request?.headers?.Cookie ?? '');
+  const payload = verifySignedToken(cookies.avgl_github_oauth_state, secret);
+  if (!payload || payload.type !== 'github_app_user_oauth_state') return null;
+  return { token:cookies.avgl_github_oauth_state, payload };
 }
 
 export function serializeCookie(name, value, options = {}) {
@@ -105,7 +185,7 @@ export function serializeCookie(name, value, options = {}) {
 }
 
 export function clearCookie(name) {
-  return serializeCookie(name, '', { maxAge: 0 });
+  return serializeCookie(name, '', { maxAge:0 });
 }
 
 export function createGitHubAppJwt(options = {}) {
@@ -114,11 +194,11 @@ export function createGitHubAppJwt(options = {}) {
   if (!appId || !privateKey) throw new Error('GitHub App credentials are not configured.');
 
   const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
-  const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const header = base64url(JSON.stringify({ alg:'RS256', typ:'JWT' }));
   const payload = base64url(JSON.stringify({
-    iat: now - 30,
-    exp: now + 540,
-    iss: appId
+    iat:now - 30,
+    exp:now + 540,
+    iss:appId
   }));
   const unsigned = header + '.' + payload;
   const signer = createSign('RSA-SHA256');
@@ -131,7 +211,7 @@ async function expectJson(fetchImpl, url, options = {}) {
   const response = await fetchImpl(url, options);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(payload?.message || 'GitHub App request failed with status ' + response.status + '.');
+    const error = new Error(payload?.message || payload?.error_description || 'GitHub request failed with status ' + response.status + '.');
     error.statusCode = response.status;
     throw error;
   }
@@ -145,54 +225,20 @@ export async function mintInstallationToken(installationId, options = {}) {
     fetchImpl,
     'https://api.github.com/app/installations/' + encodeURIComponent(String(installationId)) + '/access_tokens',
     {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + appJwt,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'AVGL/0.4'
+      method:'POST',
+      headers:{
+        Authorization:'Bearer ' + appJwt,
+        Accept:'application/vnd.github+json',
+        'User-Agent':'AVGL/0.5'
       }
     }
   );
   if (typeof payload.token !== 'string' || !payload.token) throw new Error('GitHub did not return an installation token.');
   return {
-    token: payload.token,
-    expiresAt: payload.expires_at ?? null,
-    permissions: payload.permissions ?? {},
-    repositories: payload.repositories ?? null
-  };
-}
-
-export async function listInstallationRepositories(installationId, options = {}) {
-  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  const minted = await mintInstallationToken(installationId, options);
-  const repositories = [];
-  let page = 1;
-  while (page <= 10) {
-    const payload = await expectJson(
-      fetchImpl,
-      'https://api.github.com/installation/repositories?per_page=100&page=' + page,
-      {
-        headers: {
-          Authorization: 'Bearer ' + minted.token,
-          Accept: 'application/vnd.github+json',
-          'User-Agent': 'AVGL/0.4'
-        }
-      }
-    );
-    repositories.push(...(payload.repositories ?? []));
-    if ((payload.repositories ?? []).length < 100) break;
-    page += 1;
-  }
-  return {
-    token: minted.token,
-    expiresAt: minted.expiresAt,
-    repositories: repositories.map((repo) => ({
-      id: repo.id,
-      fullName: repo.full_name,
-      private: Boolean(repo.private),
-      defaultBranch: repo.default_branch,
-      permissions: repo.permissions ?? {}
-    }))
+    token:payload.token,
+    expiresAt:payload.expires_at ?? null,
+    permissions:payload.permissions ?? {},
+    repositories:payload.repositories ?? null
   };
 }
 
@@ -204,35 +250,130 @@ export function buildInstallationUrl(appSlug, state) {
   return url.toString();
 }
 
+export function buildOAuthAuthorizeUrl(clientId, redirectUri, state) {
+  const id = String(clientId ?? '').trim();
+  if (!id) throw new Error('GITHUB_APP_CLIENT_ID is not configured.');
+  const url = new URL('https://github.com/login/oauth/authorize');
+  url.searchParams.set('client_id', id);
+  url.searchParams.set('redirect_uri', redirectUri);
+  url.searchParams.set('state', state);
+  return url.toString();
+}
+
+export async function exchangeOAuthCode(code, options = {}) {
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (!options.clientId || !options.clientSecret) throw new Error('GitHub App OAuth client credentials are not configured.');
+  const payload = await expectJson(fetchImpl, 'https://github.com/login/oauth/access_token', {
+    method:'POST',
+    headers:{
+      Accept:'application/json',
+      'Content-Type':'application/json',
+      'User-Agent':'AVGL/0.5'
+    },
+    body:JSON.stringify({
+      client_id:options.clientId,
+      client_secret:options.clientSecret,
+      code,
+      redirect_uri:options.redirectUri
+    })
+  });
+  if (typeof payload.access_token !== 'string' || !payload.access_token) throw new Error('GitHub did not return a user access token.');
+  return {
+    accessToken:payload.access_token,
+    expiresIn:Number(payload.expires_in) || null,
+    refreshToken:typeof payload.refresh_token === 'string' ? payload.refresh_token : null,
+    refreshTokenExpiresIn:Number(payload.refresh_token_expires_in) || null
+  };
+}
+
+async function githubUserRequest(fetchImpl, url, accessToken) {
+  return expectJson(fetchImpl, url, {
+    headers:{
+      Authorization:'Bearer ' + accessToken,
+      Accept:'application/vnd.github+json',
+      'X-GitHub-Api-Version':'2026-03-10',
+      'User-Agent':'AVGL/0.5'
+    }
+  });
+}
+
+export async function listUserInstallationRepositories(installationId, accessToken, options = {}) {
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const repositories = [];
+  let page = 1;
+  while (page <= 10) {
+    const payload = await githubUserRequest(
+      fetchImpl,
+      'https://api.github.com/user/installations/' + encodeURIComponent(String(installationId)) + '/repositories?per_page=100&page=' + page,
+      accessToken
+    );
+    repositories.push(...(payload.repositories ?? []));
+    if ((payload.repositories ?? []).length < 100) break;
+    page += 1;
+  }
+  return repositories.map((repo) => ({
+    id:repo.id,
+    fullName:repo.full_name,
+    private:Boolean(repo.private),
+    defaultBranch:repo.default_branch,
+    permissions:repo.permissions ?? {}
+  }));
+}
+
+export async function verifyUserInstallationAccess(installationId, accessToken, options = {}) {
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const [user, repositories] = await Promise.all([
+    githubUserRequest(fetchImpl, 'https://api.github.com/user', accessToken),
+    listUserInstallationRepositories(installationId, accessToken, { fetchImpl })
+  ]);
+  return {
+    user:{
+      id:user.id,
+      login:user.login,
+      avatarUrl:user.avatar_url ?? null
+    },
+    repositories
+  };
+}
+
 export function githubAppConfigFromEnv(env = process.env) {
   return {
-    appId: env.GITHUB_APP_ID,
-    appSlug: env.GITHUB_APP_SLUG,
-    privateKey: env.GITHUB_APP_PRIVATE_KEY,
-    sessionSecret: env.AVGL_SESSION_SECRET
+    appId:env.GITHUB_APP_ID,
+    appSlug:env.GITHUB_APP_SLUG,
+    privateKey:env.GITHUB_APP_PRIVATE_KEY,
+    clientId:env.GITHUB_APP_CLIENT_ID,
+    clientSecret:env.GITHUB_APP_CLIENT_SECRET,
+    sessionSecret:env.AVGL_SESSION_SECRET,
+    publicOrigin:env.AVGL_PUBLIC_ORIGIN
   };
+}
+
+export function resolvePublicOrigin(config) {
+  if (!config?.publicOrigin) throw new Error('AVGL_PUBLIC_ORIGIN is not configured.');
+  return normalizeOrigin(config.publicOrigin);
 }
 
 export async function resolveGitHubAccess(request, body = {}, options = {}) {
   if (body?.accessMode !== 'github_app') {
-    return { mode: 'public', token: options.publicToken ?? process.env.GITHUB_TOKEN ?? undefined, installationId: null };
+    return {
+      mode:'public',
+      token:options.publicToken ?? process.env.GITHUB_TOKEN ?? undefined,
+      installationId:null,
+      user:null
+    };
   }
 
   const config = options.config ?? githubAppConfigFromEnv(options.env);
-  if (!config.sessionSecret) throw Object.assign(new Error('Private repository sessions are not configured.'), { statusCode: 503 });
+  if (!config.sessionSecret) throw Object.assign(new Error('Private repository sessions are not configured.'), { statusCode:503 });
 
-  const session = readInstallationSession(request, config.sessionSecret);
-  if (!session) throw Object.assign(new Error('GitHub App session is missing or expired.'), { statusCode: 401 });
+  const session = readUserSession(request, config.sessionSecret);
+  if (!session) throw Object.assign(new Error('GitHub user session is missing or expired.'), { statusCode:401 });
 
-  const minted = await mintInstallationToken(session.installationId, {
-    appId: config.appId,
-    privateKey: config.privateKey,
-    fetchImpl: options.fetchImpl
-  });
   return {
-    mode: 'github_app',
-    token: minted.token,
-    installationId: session.installationId,
-    expiresAt: minted.expiresAt
+    mode:'github_app',
+    token:session.accessToken,
+    installationId:session.installationId,
+    user:session.user ?? null,
+    expiresAt:new Date(session.exp * 1000).toISOString()
   };
 }

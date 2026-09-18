@@ -90,12 +90,18 @@ function mergeCoverage(target, source) {
 }
 
 async function fetchCandidateContent(tree, file, options) {
-  const path = file.path.split('/').map(encodeURIComponent).join('/');
-  const rawUrl = `https://raw.githubusercontent.com/${tree.parsed.owner}/${tree.parsed.repo}/${encodeURIComponent(tree.ref)}/${path}`;
   try {
-    const response = await options.fetchImpl(rawUrl, { headers: githubHeaders(options.token, true) });
+    const response = await options.fetchImpl(
+      tree.apiBase + '/git/blobs/' + encodeURIComponent(file.sha),
+      { headers: githubHeaders(options.token) }
+    );
     if (!response.ok) return { file, error: `HTTP ${response.status}` };
-    return { file: { ...file, content: await response.text() }, error: null };
+    const payload = await response.json();
+    if (payload.encoding !== 'base64' || typeof payload.content !== 'string') {
+      return { file, error: 'unsupported blob encoding' };
+    }
+    const content = Buffer.from(payload.content.replace(/\n/g, ''), 'base64').toString('utf8');
+    return { file: { ...file, content }, error: null };
   } catch (error) {
     return { file, error: error?.message || 'fetch failed' };
   }

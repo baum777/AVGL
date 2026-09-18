@@ -27,6 +27,9 @@
     },
     "api/github-app/disconnect.mjs": {
       "maxDuration": 10
+    },
+    "api/github-app/oauth-callback.mjs": {
+      "maxDuration": 20
     }
   },
   "rewrites": [
