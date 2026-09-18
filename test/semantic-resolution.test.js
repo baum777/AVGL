@@ -7,6 +7,8 @@ const canonicalCanvasFixture = new URL('./fixtures/semantic-resolution/canvas-co
 const canonicalWhoNegativeFixture = new URL('./fixtures/semantic-resolution/who-non-agent-negative.mjs', import.meta.url);
 const canonicalThinkNegativeFixture = new URL('./fixtures/semantic-resolution/think-non-cognition-negative.mjs', import.meta.url);
 const canonicalCanNegativeFixture = new URL('./fixtures/semantic-resolution/can-non-capability-negative.mjs', import.meta.url);
+const canonicalMayNegativeFixture = new URL('./fixtures/semantic-resolution/may-non-authority-negative.mjs', import.meta.url);
+const canonicalMayScopeRevocationNegativeFixture = new URL('./fixtures/semantic-resolution/may-scope-revocation-negative.mjs', import.meta.url);
 
 test('canonical negative fixture rejects Canvas 2D context as agentic KNOW evidence', async () => {
   const content = await readFile(canonicalCanvasFixture, 'utf8');
@@ -318,16 +320,138 @@ test('generic capability words in documentation fail closed', () => {
   assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-adapter-connector' || item.rule === 'unresolved-capability-token'));
 });
 
-test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
-  const content = 'const permission = policy.permission;';
+test('canonical MAY negatives reject policy, funding grant, approval metric, generic scope, and certificate revocation', async () => {
+  const [contentA, contentB] = await Promise.all([
+    readFile(canonicalMayNegativeFixture, 'utf8'),
+    readFile(canonicalMayScopeRevocationNegativeFixture, 'utf8')
+  ]);
+
+  const discovery = discoverFiles([
+    { path: 'src/domain/governance-words.mjs', content: contentA, size: Buffer.byteLength(contentA, 'utf8') },
+    { path: 'src/domain/scope-words.mjs', content: contentB, size: Buffer.byteLength(contentB, 'utf8') }
+  ]);
+
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'MAY'), false);
+  const rules = new Set(
+    discovery.semanticRejections
+      .filter((item) => item.candidateClass === 'MAY')
+      .map((item) => item.rule)
+  );
+  assert.equal(rules.has('privacy-or-editorial-policy'), true);
+  assert.equal(rules.has('research-or-financial-grant'), true);
+  assert.equal(rules.has('approval-rating'), true);
+  assert.equal(rules.has('generic-program-scope'), true);
+  assert.equal(rules.has('certificate-revocation'), true);
+});
+
+test('MAY accepts explicit permission binding and preserves semantic provenance', () => {
+  const content = [
+    'export function authorizeAction(permission, subject, action) {',
+    '  if (!permissions.has(permission)) throw new Error("denied");',
+    '  return { subject, action };',
+    '}'
+  ].join('\n');
+
   const discovery = discoverFiles([{
-    path: 'src/policy.mjs',
+    path: 'src/authority/permissions.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.mode, 'SEMANTIC');
+  assert.equal(may.semanticResolution.resolver, 'may.authority.v1');
+  assert.equal(may.semanticResolution.rule, 'permission-binding');
+
+  const classified = classifyDiscoveries(discovery);
+  const claim = classified.classifications.find((item) => item.semanticClass === 'MAY');
+  assert.ok(claim);
+  assert.equal(claim.evidence[0].semanticResolution.resolver, 'may.authority.v1');
+});
+
+test('MAY accepts executable policy authorization enforcement', () => {
+  const content = 'const allowed = policy.enforce(subject, action, resource);';
+  const discovery = discoverFiles([{
+    path: 'src/policy/enforce.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.rule, 'policy-authorization-enforcement');
+});
+
+test('MAY accepts approval gates tied to runtime operations', () => {
+  const content = 'await requireApproval({ workflow, action, subject });';
+  const discovery = discoverFiles([{
+    path: 'src/approvals/runtime-gate.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.rule, 'approval-gate');
+});
+
+test('MAY accepts authority grant lifecycle surfaces', () => {
+  const content = 'const valid = validateGrant(grantToken);';
+  const discovery = discoverFiles([{
+    path: 'src/grants/validate.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.rule, 'authority-grant-lifecycle');
+});
+
+test('MAY accepts authority scope enforcement', () => {
+  const content = 'requireScope(subject, requiredScope);';
+  const discovery = discoverFiles([{
+    path: 'src/scopes/enforce.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.rule, 'authority-scope-enforcement');
+});
+
+test('MAY accepts authority revocation without implying ACT or DID', () => {
+  const content = 'revokeGrant(grantId);';
+  const discovery = discoverFiles([{
+    path: 'src/grants/revocation.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.rule, 'authority-grant-lifecycle');
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'ACT'), false);
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'DID'), false);
+});
+
+test('generic authority vocabulary fails closed even in implementation code', () => {
+  const content = 'const permission = policy.permission; const scope = request.scope;';
+  const discovery = discoverFiles([{
+    path: 'src/runtime.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'MAY'), false);
+  assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-authority-token'));
+});
+
+test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
+  const content = 'execute(workOrder);';
+  const discovery = discoverFiles([{
+    path: 'src/executor.mjs',
     content,
     size: Buffer.byteLength(content, 'utf8')
   }]);
 
-  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
-  assert.ok(may);
-  assert.equal(may.semanticResolution.mode, 'LEXICAL_FALLBACK');
+  const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
+  assert.ok(act);
+  assert.equal(act.semanticResolution.mode, 'LEXICAL_FALLBACK');
   assert.equal(discovery.semanticResolution.lexicalFallbackAccepted > 0, true);
 });
