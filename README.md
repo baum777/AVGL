@@ -28,30 +28,51 @@ Wie wird das Ergebnis nachgewiesen?
 
 ## v0.1 kernel
 
-The first implementation establishes an evidence-bound compiler pipeline:
+The implementation uses an evidence-bound compiler pipeline:
 
 ```text
-DISCOVER → CLASSIFY → BIND → PROJECT
+DISCOVER → CLASSIFY → BIND → SYNTHESIZE → PROJECT
 ```
 
 - **DISCOVER** scans bounded repository text surfaces and skips common secret files.
 - **CLASSIFY** maps evidence to AVGL semantic candidates.
 - **BIND** creates an AVGL Intermediate Representation (IR) with source evidence and explicit unknowns.
+- **SYNTHESIZE** groups accepted evidence into repository-specific semantic families without upgrading evidence strength.
 - **PROJECT** renders human-first views from the same IR.
 
 The baseline is deterministic and dependency-free. It does **not** ask an LLM to invent the architecture.
 
+## Deterministic synthesis
+
+AVGL does not stop at generic labels such as `Tool / adapter surface`. Accepted evidence is grouped into bounded families that make the repository easier to understand.
+
+Examples:
+
+```text
+THINK → OpenAI models · planning · reasoning · handoffs
+CAN   → MCP · filesystem · browser · shell · database · Git
+MAY   → authorization · approval · permissions · grants
+ACT   → executor · network dispatch · Git mutation · deployment
+DID   → verification · receipts · audit · tests · tracing
+```
+
+Every synthesized family keeps bounded evidence references. `SYNTHESIZE` cannot revive evidence rejected by the earlier semantic gates, so `UNKNOWN` remains `UNKNOWN`.
+
+```text
+raw evidence → semantic gate → bounded families → human story
+```
+
 ## Web interface
 
-The first Vercel-facing interface is intentionally not a graph explorer. It uses three progressive views:
+The Vercel-facing interface is intentionally not a graph explorer. It uses three progressive views:
 
 ```text
 STORY → INSPECT → SYSTEM
 ```
 
-- **Story** explains the system in plain language.
+- **Story** explains the system with synthesized repository-specific families.
 - **Inspect** exposes the exact file/line evidence behind each claim.
-- **System** shows a fixed readable flow with an explicit authority boundary.
+- **System** shows a fixed semantic frame with an explicit authority boundary; it is not reconstructed topology.
 
 The web endpoint accepts a public GitHub repository URL or `owner/repo`, performs a bounded static scan, and returns the same AVGL IR used by the local CLI.
 
@@ -74,7 +95,7 @@ node ./bin/avgl.js analyze ../some-agent --format json
 If a repository exposes a browser tool but contains no recognized authority/policy evidence, AVGL may report:
 
 ```text
-CAN  Tool / adapter surface
+CAN  Capability surfaces: browser / web.
 MAY  Nicht belegt
 ```
 
@@ -99,6 +120,7 @@ src/discover.js             bounded local + virtual-file discovery
 src/github-source.js        bounded GitHub repository source adapter
 src/classify.js             semantic classification
 src/bind.js                 evidence-bound AVGL IR
+src/synthesize.js           deterministic semantic family synthesis
 src/project.js              CLI Story/Card/JSON projections
 api/analyze.mjs             Vercel analysis endpoint
 web/index.html              human-first web shell
@@ -106,7 +128,7 @@ web/app.js                  Story / Inspect / System renderer
 web/styles.css              responsive visual language
 schema/avgl-ir-v0.1.json    machine contract
 docs/AVGL_V0_1.md           concept and boundaries
-test/*.test.js              core and source-adapter invariant tests
+test/*.test.js              core, source-adapter, and synthesis invariant tests
 ```
 
 ## Current evidence model
@@ -122,11 +144,10 @@ The v0.1 generic repository scanner emits `INFERRED` evidence. Future framework 
 
 ## Next slices
 
-1. private repository authentication;
-2. framework adapter interface;
-3. AST-backed JavaScript/TypeScript adapter;
-4. MCP manifest adapter;
-5. relation/call-path extraction;
-6. runtime trace ingestion.
+1. framework-aware adapters and AST-backed JavaScript/TypeScript extraction;
+2. MCP manifest adapter;
+3. relation/call-path extraction;
+4. runtime trace ingestion;
+5. private repository authentication.
 
 See [`docs/AVGL_V0_1.md`](docs/AVGL_V0_1.md) for the concept.

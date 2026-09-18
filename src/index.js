@@ -1,16 +1,28 @@
 import { discoverRepository } from './discover.js';
 import { classifyDiscoveries } from './classify.js';
 import { bindAvglIr } from './bind.js';
+import { synthesizeAvglIr } from './synthesize.js';
+import {
+  analyzeGitHubRepository as analyzeGitHubRepositoryRaw,
+  discoverGitHubRepository,
+  parseGitHubRepository,
+  selectGitHubCandidates
+} from './github-source.js';
 
 export { discoverRepository, discoverFiles, sourceKindForPath } from './discover.js';
 export { classifyDiscoveries } from './classify.js';
 export { bindAvglIr } from './bind.js';
-export { analyzeGitHubRepository, discoverGitHubRepository, parseGitHubRepository, selectGitHubCandidates } from './github-source.js';
+export { synthesizeAvglIr } from './synthesize.js';
+export { discoverGitHubRepository, parseGitHubRepository, selectGitHubCandidates };
 export { projectStory, projectHarnessCard, projectJson } from './project.js';
 export { SEMANTIC_CLASSES, EVIDENCE_STATES, HUMAN_LABELS } from './constants.js';
 
 export async function analyzeRepository(rootPath = '.', options = {}) {
   const discovery = await discoverRepository(rootPath, options);
   const classifications = classifyDiscoveries(discovery);
-  return bindAvglIr(discovery, classifications);
+  return synthesizeAvglIr(bindAvglIr(discovery, classifications));
+}
+
+export async function analyzeGitHubRepository(input, options = {}) {
+  return synthesizeAvglIr(await analyzeGitHubRepositoryRaw(input, options));
 }

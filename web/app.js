@@ -1,152 +1,63 @@
-const CLASSES = ['WHO', 'KNOW', 'THINK', 'CAN', 'MAY', 'ACT', 'DID'];
-const QUESTIONS = {
-  WHO: 'Who is acting?', KNOW: 'What does it work with?', THINK: 'How does it think or plan?',
-  CAN: 'What can it technically reach?', MAY: 'What is it allowed to do?',
-  ACT: 'Where can real effects happen?', DID: 'How is the result evidenced?'
+const $=s=>document.querySelector(s);
+const state={locale:localStorage.getItem("avgl.locale")||(navigator.language||"en").toLowerCase().startsWith("de")?"de":"en",repo:"",ir:null,inventory:null,activeFile:null,chat:[]};
+const TXT={
+en:{hero1:"Understand the agent.",hero2:"Not the graph.",hero:"Paste a public GitHub repository. AVGL maps bounded evidence into a readable system story, a hierarchical repository view, and an evidence-aware assistant.",repo:"GitHub repository",analyze:"Analyze",help:"v0.2 analyzes public GitHub repositories. Private repository auth is not enabled yet.",analysis:"Analysis",story:"Story",files:"Files",inspect:"Inspect",system:"System",filesTitle:"Repository structure",filesIntro:"Browse the repository by hierarchy. Select a file for a grounded description of its role, content, and likely effect.",search:"Search files…",select:"Select a file",selectHint:"AVGL will explain what it contains, what role it plays, and which semantic areas it touches.",excerpt:"Source excerpt",ask:"Ask AVGL",assistant:"Repository assistant",noRepo:"Analyze a repository first. The assistant will answer against the current repo context.",placeholder:"Ask about architecture, a file, permissions, runtime…",send:"Send",loading:"Discovering, binding and synthesizing repository evidence…",done:"Analysis complete. Signals are bounded; unknowns stay explicit.",loadFiles:"Loading repository hierarchy…",filesFail:"Repository hierarchy could not be loaded.",fileLoad:"Loading file context…",fileFail:"File context could not be loaded.",role:"Role",areas:"Semantic areas",symbols:"Symbols / exports",lines:"Lines",size:"Size",source:"Source surfaces",notFound:"Not evidenced",partial:"Partial bounded scan",complete:"Complete bounded scan",systemNote:"Semantic frame, not reconstructed topology. v0.2 does not yet extract complete relation/call paths.",evidenceIntro:"Static signals grouped by semantic area. Documentation can support understanding, but cannot by itself prove MAY, ACT or DID.",thinking:"Reading relevant repository context…",chatFail:"The assistant could not answer this request.",keyMissing:"OpenRouter is not configured. Add OPENROUTER_API_KEY in Vercel.",suggest1:"What are the biggest architecture gaps?",suggest2:"Explain the authority model.",suggest3:"Which files matter most for runtime behavior?",canMay:"Technical reach is not permission.",actDid:"An effect path is not a verified result.",unknown:"Missing evidence is never filled with a guess."},
+de:{hero1:"Verstehe den Agent.",hero2:"Nicht den Graph.",hero:"Füge ein öffentliches GitHub-Repository ein. AVGL überführt begrenzte Evidence in eine verständliche System-Story, eine hierarchische Repository-Ansicht und einen Evidence-gebundenen Assistant.",repo:"GitHub-Repository",analyze:"Analysieren",help:"v0.2 analysiert öffentliche GitHub-Repositories. Private Repository-Authentifizierung ist noch nicht aktiviert.",analysis:"Analyse",story:"Story",files:"Files",inspect:"Inspect",system:"System",filesTitle:"Repository-Struktur",filesIntro:"Navigiere hierarchisch durch das Repository. Wähle ein File für eine verständliche Beschreibung von Rolle, Inhalt und möglicher Wirkung.",search:"Files durchsuchen…",select:"File auswählen",selectHint:"AVGL erklärt Inhalt, Rolle und die berührten semantischen Bereiche.",excerpt:"Source-Auszug",ask:"AVGL fragen",assistant:"Repository-Assistant",noRepo:"Analysiere zuerst ein Repository. Danach antwortet der Assistant auf Basis des aktuellen Repo-Context.",placeholder:"Frage zu Architektur, einem File, Permissions, Runtime…",send:"Senden",loading:"Repository-Evidence wird entdeckt, gebunden und synthetisiert…",done:"Analyse abgeschlossen. Signale bleiben begrenzt; Unbekanntes bleibt explizit.",loadFiles:"Repository-Hierarchie wird geladen…",filesFail:"Repository-Hierarchie konnte nicht geladen werden.",fileLoad:"File-Context wird geladen…",fileFail:"File-Context konnte nicht geladen werden.",role:"Rolle",areas:"Semantische Bereiche",symbols:"Symbole / Exports",lines:"Zeilen",size:"Größe",source:"Source-Surfaces",notFound:"Nicht belegt",partial:"Partieller begrenzter Scan",complete:"Vollständiger begrenzter Scan",systemNote:"Semantischer Rahmen, keine rekonstruierte Topologie. v0.2 extrahiert noch keine vollständigen Relation-/Call-Pfade.",evidenceIntro:"Statische Signale nach semantischem Bereich. Dokumentation kann Verständnis stützen, beweist allein aber weder MAY, ACT noch DID.",thinking:"Relevanter Repository-Context wird gelesen…",chatFail:"Der Assistant konnte diese Anfrage nicht beantworten.",keyMissing:"OpenRouter ist nicht konfiguriert. OPENROUTER_API_KEY muss in Vercel gesetzt werden.",suggest1:"Was sind die größten Architektur-Gaps?",suggest2:"Erkläre das Authority-Modell.",suggest3:"Welche Files sind für das Runtime-Verhalten am wichtigsten?",canMay:"Technische Reichweite ist keine Permission.",actDid:"Ein Effect-Pfad ist noch kein verifiziertes Ergebnis.",unknown:"Fehlende Evidence wird niemals durch eine Vermutung ersetzt."}
 };
-const form = document.querySelector('#analyze-form');
-const repositoryInput = document.querySelector('#repository');
-const analyzeButton = document.querySelector('#analyze-button');
-const demoButton = document.querySelector('#demo-button');
-const statusNode = document.querySelector('#status');
-const errorNode = document.querySelector('#error');
-const resultNode = document.querySelector('#result');
-const resultTitle = document.querySelector('#result-title');
-const scanMeta = document.querySelector('#scan-meta');
-const partialWarning = document.querySelector('#partial-warning');
-const storyView = document.querySelector('#story-view');
-const inspectView = document.querySelector('#inspect-view');
-const systemView = document.querySelector('#system-view');
-const tabs = [...document.querySelectorAll('.view-tab')];
+const Q={en:{WHO:"Who is acting?",KNOW:"What does it work with?",THINK:"How does it think or plan?",CAN:"What can it technically reach?",MAY:"What is it allowed to do?",ACT:"Where can real effects happen?",DID:"How is the result evidenced?"},de:{WHO:"Wer handelt?",KNOW:"Womit arbeitet das System?",THINK:"Wie denkt oder plant es?",CAN:"Was kann es technisch erreichen?",MAY:"Was darf es?",ACT:"Wo kann reale Wirkung entstehen?",DID:"Wie wird das Ergebnis nachgewiesen?"}};
+const PREFIX={en:{WHO:"Agent structure",KNOW:"Context surfaces",THINK:"Cognition signals",CAN:"Capability surfaces",MAY:"Authority controls",ACT:"Effect paths",DID:"Evidence paths"},de:{WHO:"Agent-Struktur",KNOW:"Context-Surfaces",THINK:"Cognition-Signale",CAN:"Capability-Surfaces",MAY:"Authority-Controls",ACT:"Effect-Pfade",DID:"Evidence-Pfade"}};
+const FAMILY_DE={"agent-definitions":"Agent-Definitionen","harness-instructions":"Harness / Instructions","roles":"Rollen","memory":"Memory","retrieval-rag":"Retrieval / RAG","context-state":"Context / State","resources-files":"Resources / Files","planning":"Planning / Replanning","reasoning":"Reasoning","delegation":"Handoffs / Subagents","routing":"Model- / Task-Routing","model-runtime":"Model-Runtime","filesystem":"Filesystem","browser-web":"Browser / Web","shell-process":"Shell / Process","function-tools":"Function Tools","database-storage":"Database / Storage","git-repository":"Git / Repository","messaging":"Messaging / E-Mail","authorization-policy":"Authorization / Policy","approval-hitl":"Approval / Human Control","permission-scope":"Permissions / Scope","grants-delegation":"Grants / Delegation","revocation-expiry":"Revocation / Expiry","executor-dispatch":"Executor / Dispatch","file-mutation":"File-Mutation","git-mutation":"Git-Mutation","network-send":"Network / API-Dispatch","deployment":"Deployment","database-mutation":"Database-Mutation","command-execution":"Command-Execution","verification":"Verification","receipts":"Receipts","audit-logging":"Audit / Logging","tests":"Tests","tracing-observability":"Tracing / Observability","reconciliation":"Reconciliation","outcomes":"Outcomes / Results"};
+function t(k){return TXT[state.locale][k]||TXT.en[k]||k}
+function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n}
+function nodeFor(c){return state.ir?.nodes?.find(n=>n.semanticClass===c)||null}
+function areaFor(c){return state.ir?.synthesis?.areas?.[c]||null}
+function famLabel(f){return state.locale==="de"?(FAMILY_DE[f.id]||f.label):f.label}
+function summary(c){const a=areaFor(c),n=nodeFor(c);if(!a||a.status!=="EVIDENCED")return t("notFound");const labels=(a.families||[]).map(famLabel);return (PREFIX[state.locale][c]||c)+": "+(labels.length?labels.join(", "):(n?.label||"bounded signals"))+"."}
+function fmtBytes(v){v=Number(v||0);return v<1024?v+" B":v<1048576?(v/1024).toFixed(1)+" KB":(v/1048576).toFixed(1)+" MB"}
+function chip(text,cls=""){return el("span","chip "+cls,text)}
+function applyLocale(){
+ document.documentElement.lang=state.locale;$("#lang-toggle").textContent=state.locale==="de"?"EN":"DE";
+ const map={heroLine1:"hero1",heroLine2:"hero2",heroCopy:"hero",repoLabel:"repo",analyzeBtn:"analyze",repoHelp:"help",analysisEyebrow:"analysis",tabStory:"story",tabFiles:"files",tabInspect:"inspect",tabSystem:"system",filesTitle:"filesTitle",filesIntro:"filesIntro",selectFile:"select",selectFileHint:"selectHint",sourceExcerpt:"excerpt",fabText:"ask",assistantTitle:"assistant",assistantContext:"noRepo",assistantSend:"send"};
+ for(const [id,key] of Object.entries(map)){const n=$("#"+id);if(n)n.textContent=t(key)}
+ $("#file-search").placeholder=t("search");$("#assistant-input").placeholder=t("placeholder");
+ if(state.ir){renderAll(false)} if(state.inventory)renderTree();if(state.activeFile)loadFile(state.activeFile,true);renderSuggestions();updateAssistantContext();
+}
+$("#lang-toggle").onclick=()=>{state.locale=state.locale==="de"?"en":"de";localStorage.setItem("avgl.locale",state.locale);applyLocale()};
+function renderStory(){
+ const host=$("#story-view");host.replaceChildren();const stack=el("div","story-stack");
+ ["WHO","KNOW","THINK"].forEach((c,i)=>stack.append(storyStep(c,i+1)));
+ const pair=el("div","capability-pair");pair.append(areaCard("CAN"),areaCard("MAY"));stack.append(pair,storyStep("ACT",4),storyStep("DID",5));host.append(stack)
+}
+function storyStep(c,i){const n=nodeFor(c),a=areaFor(c),w=el("div","story-step"+(n?"":" unknown"));w.append(el("div","story-number",String(i)));const body=el("div"),q=el("div","story-question");q.append(el("span","token",c),document.createTextNode(" · "+Q[state.locale][c]));body.append(q,el("p","story-answer",summary(c)),el("p","story-explain",n?sourceText(n):t("notFound")));if(a?.families?.length)body.append(familyRow(a));w.append(body);return w}
+function areaCard(c){const a=areaFor(c),n=nodeFor(c),card=el("div","pair-card"+(!n&&c==="MAY"?" authority-missing":""));card.append(el("span","token",c),el("h3","",summary(c)),el("p","",n?sourceText(n):t("notFound")));if(a?.families?.length)card.append(familyRow(a));return card}
+function familyRow(a){const r=el("div","family-row");(a.families||[]).forEach(f=>r.append(chip(famLabel(f),"family")));return r}
+function sourceText(n){const kinds=[...new Set((n.evidence||[]).map(e=>e.sourceKind).filter(Boolean))];return t("source")+": "+(kinds.join(", ")||"unknown")}
+function renderInspect(){
+ const host=$("#inspect-view");host.replaceChildren(el("div","notice",t("evidenceIntro")));const grid=el("div","inspect-grid");
+ for(const c of ["WHO","KNOW","THINK","CAN","MAY","ACT","DID"]){const n=nodeFor(c),card=el("article","inspect-card"),head=el("div","inspect-head");head.append(el("div","token",c),chip(n?.evidenceState||"UNKNOWN"));card.append(head,el("h3","",Q[state.locale][c]),el("p","",summary(c)));if(n?.evidence?.length){const d=el("details"),s=el("summary","",n.evidence.length+" evidence refs"),list=el("div","evidence-list");d.append(s);n.evidence.forEach(e=>{const item=el("div","evidence-item"),b=el("button","evidence-link",e.path+":"+e.line);b.onclick=()=>{selectView("files");loadFile(e.path)};item.append(b,chip(e.sourceKind||"unknown"),el("code","",e.snippet||""));list.append(item)});d.append(list);card.append(d)}grid.append(card)}host.append(grid)
+}
+function renderSystem(){const h=$("#system-view");h.replaceChildren(el("div","notice",t("systemNote")));const s=el("div","system-story");s.append(band("WHO · KNOW · THINK",state.locale==="de"?"Agent-Plane":"Agent plane",summary("WHO")+" · "+summary("KNOW")+" · "+summary("THINK")),arrow(),band("PROPOSAL",state.locale==="de"?"Intent verlässt Cognition":"Intent leaves cognition",state.locale==="de"?"Ein Model-Vorschlag ist noch keine Authority oder externer Effect.":"A model proposal is not yet authority or an external effect."),boundary());const p=el("div","system-pair");p.append(band("CAN",summary("CAN"),t("canMay")),band("MAY",summary("MAY"),t("canMay")));s.append(p,arrow(),band("ACT",summary("ACT"),t("actDid")),arrow(),band("DID",summary("DID"),t("actDid")));h.append(s)}
+function band(tok,title,copy){const b=el("div","system-band");b.append(el("span","token",tok),el("h3","",title),el("p","",copy));return b}function arrow(){return el("div","system-arrow","↓")}function boundary(){return el("div","system-boundary",state.locale==="de"?"Authority Boundary":"Authority boundary")}
+function renderMeta(){const a=state.ir.analysis||{},c=a.sourceCoverage||{},eligible=a.filesEligible??a.filesSeen;const h=$("#scan-meta");h.replaceChildren(chip((a.filesScanned||0)+"/"+eligible+" "+t("sampled")),chip("impl "+(c.implementation||0)+" · cfg "+(c.config||0)+" · test "+(c.test||0)+" · docs "+(c.documentation||0)),chip(a.scanComplete?t("complete"):t("partial")));const n=$("#partial-warning");n.hidden=!!a.scanComplete;if(!n.hidden)n.textContent=(state.locale==="de"?"Partieller Scan: Nicht gelesene Evidence bleibt unbekannt.":"Partial scan: unseen evidence remains unknown.")}
+function renderAll(scroll=true){$("#result-title").textContent=state.ir?.source?.label||state.repo;renderMeta();renderStory();renderInspect();renderSystem();$("#result").hidden=false;if(scroll)$("#result").scrollIntoView({behavior:"smooth",block:"start"})}
+function selectView(v){document.querySelectorAll(".view-tab").forEach(b=>{const on=b.dataset.view===v;b.classList.toggle("active",on);b.setAttribute("aria-selected",String(on))});["story","files","inspect","system"].forEach(x=>$("#"+x+"-view").hidden=x!==v)}
+document.querySelectorAll(".view-tab").forEach(b=>b.onclick=()=>selectView(b.dataset.view));
 
-function create(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-function byClass(ir, semanticClass) { return ir.nodes.find((node) => node.semanticClass === semanticClass) ?? null; }
-function answer(ir, semanticClass) { return byClass(ir, semanticClass)?.label ?? 'Not evidenced'; }
-function metaChip(text) { return create('span', 'meta-chip', text); }
-function evidenceKinds(node) { return [...new Set((node?.evidence ?? []).map((item) => item.sourceKind).filter(Boolean))]; }
-function evidenceHint(node) {
-  const kinds = evidenceKinds(node);
-  if (!node) return 'No bounded evidence strong enough for this semantic area.';
-  if (kinds.length === 0) return node.statement;
-  return `${node.statement} Source surfaces: ${kinds.join(', ')}.`;
-}
-function exampleIr() {
-  const node = (semanticClass, label, evidence, sourceKind = 'implementation') => ({
-    id: `${semanticClass.toLowerCase()}-example`, semanticClass, label,
-    statement: `Example evidence for ${semanticClass}.`, evidenceState: 'INFERRED', confidence: 0.8,
-    evidence: [{ path: evidence, line: 12, snippet: `example ${label.toLowerCase()}`, detector: 'demo', sourceKind }]
-  });
-  return {
-    avglVersion: '0.1', generatedAt: new Date().toISOString(), source: { kind: 'repository', label: 'example/review-agent' },
-    analysis: { pipeline: ['DISCOVER', 'CLASSIFY', 'BIND', 'PROJECT'], mode: 'demo', filesSeen: 38, filesEligible: 22, filesScanned: 17, scanComplete: false, sourceCoverage: { implementation: 10, config: 2, test: 3, documentation: 2, other: 0 }, skippedSensitive: ['.env'], skippedOversize: [], rejectedWeakEvidence: 2 },
-    nodes: [node('WHO', 'Review agent / harness', 'src/agent.ts'), node('KNOW', 'Repository + issue context', 'src/context.ts'), node('THINK', 'Reasoning model + review loop', 'src/reviewer.ts'), node('CAN', 'Repository reader + test runner', 'src/tools.ts'), node('ACT', 'Named test execution', 'src/executor.ts'), node('DID', 'Test result + review evidence', 'test/reviewer.test.ts', 'test')],
-    relations: [], unknowns: ['MAY'], invariants: ['HARNESS != AUTHORITY', 'CONTEXT != PERMISSION', 'CAN != MAY', 'PROPOSAL != EXECUTION', 'ACT != DID', 'RECEIPT != VERIFICATION']
-  };
-}
-function storyStep(index, ir, semanticClass) {
-  const node = byClass(ir, semanticClass);
-  const wrapper = create('div', `story-step${node ? '' : ' unknown'}`);
-  wrapper.append(create('div', 'story-number', String(index)));
-  const body = create('div');
-  const question = create('div', 'story-question');
-  question.append(create('span', 'token', semanticClass), document.createTextNode(` · ${QUESTIONS[semanticClass]}`));
-  body.append(question, create('p', 'story-answer', node ? node.label : 'Not evidenced'), create('p', 'story-explain', evidenceHint(node)));
-  wrapper.append(body);
-  return wrapper;
-}
-function renderStory(ir) {
-  storyView.replaceChildren();
-  const stack = create('div', 'story-stack');
-  stack.append(storyStep(1, ir, 'WHO'), storyStep(2, ir, 'KNOW'), storyStep(3, ir, 'THINK'));
-  const pair = create('div', 'capability-pair');
-  const can = byClass(ir, 'CAN'); const may = byClass(ir, 'MAY');
-  const canCard = create('div', 'pair-card');
-  canCard.append(create('span', 'token', 'CAN'), create('h3', '', can ? can.label : 'Not evidenced'), create('p', '', evidenceHint(can)));
-  const mayCard = create('div', `pair-card${may ? '' : ' authority-missing'}`);
-  mayCard.append(create('span', 'token', 'MAY'), create('h3', '', may ? may.label : 'Not evidenced'), create('p', '', evidenceHint(may)));
-  pair.append(canCard, mayCard);
-  if (can && !may) pair.append(create('p', 'invariant-note', 'Technical capability signals were found, but no implementation/config authority evidence passed the MAY gate.'));
-  stack.append(pair, storyStep(4, ir, 'ACT'), storyStep(5, ir, 'DID'));
-  storyView.append(stack);
-}
-function renderInspect(ir) {
-  inspectView.replaceChildren();
-  const intro = create('div', 'inspect-intro');
-  intro.append(create('strong', '', 'Evidence view'), create('span', '', ' Static signals are grouped by semantic area. Source type matters: documentation can support understanding, but cannot by itself prove MAY/ACT/DID.'));
-  inspectView.append(intro);
-  const grid = create('div', 'inspect-grid');
-  for (const semanticClass of CLASSES) {
-    const node = byClass(ir, semanticClass);
-    const card = create('article', 'inspect-card');
-    const head = create('div', 'inspect-card-head');
-    const titleBox = create('div');
-    titleBox.append(create('span', 'token', semanticClass), create('h3', '', QUESTIONS[semanticClass]));
-    head.append(titleBox, create('span', 'state-chip', node?.evidenceState ?? 'UNKNOWN'));
-    card.append(head, create('p', '', node ? node.label : 'No bounded evidence passed this semantic gate.'));
-    if (node?.evidence?.length) {
-      const details = create('details');
-      details.append(create('summary', '', `${node.evidence.length} evidence reference${node.evidence.length === 1 ? '' : 's'}`));
-      const list = create('ul', 'evidence-list');
-      for (const evidence of node.evidence) {
-        const item = create('li', 'evidence-item');
-        const row = create('div', 'evidence-row');
-        row.append(create('div', 'evidence-path', `${evidence.path}:${evidence.line}`), create('span', 'source-kind', evidence.sourceKind ?? 'unknown'));
-        item.append(row, create('div', 'evidence-snippet', evidence.snippet || '(empty line)'));
-        list.append(item);
-      }
-      details.append(list); card.append(details);
-    }
-    grid.append(card);
-  }
-  inspectView.append(grid);
-}
-function systemBand(token, title, copy) { const band = create('div', 'system-band'); band.append(create('span', 'token', token), create('h3', '', title), create('p', '', copy)); return band; }
-function arrow() { return create('div', 'system-arrow', '↓'); }
-function renderSystem(ir) {
-  systemView.replaceChildren();
-  const disclaimer = create('div', 'notice');
-  disclaimer.textContent = 'Semantic frame, not reconstructed topology. v0.1 has no relation/call-path extraction yet.';
-  systemView.append(disclaimer);
-  const story = create('div', 'system-story');
-  story.append(systemBand('WHO · KNOW · THINK', 'Agent plane', `${answer(ir, 'WHO')} · ${answer(ir, 'KNOW')} · ${answer(ir, 'THINK')}`), arrow(), systemBand('PROPOSAL', 'Intent leaves cognition', 'A model proposal is not yet authority or an external effect.'), arrow(), create('div', 'system-boundary', 'Authority boundary'));
-  const pair = create('div', 'system-pair');
-  pair.append(systemBand('CAN', answer(ir, 'CAN'), 'Technical reach / callable surface'), systemBand('MAY', answer(ir, 'MAY'), 'Authority evidence from implementation/config only'));
-  story.append(pair, arrow(), systemBand('ACT', answer(ir, 'ACT'), 'Implementation-backed effect path'), arrow(), systemBand('DID', answer(ir, 'DID'), 'Implementation/test/config-backed evidence path'));
-  systemView.append(story);
-}
-function render(ir) {
-  resultTitle.textContent = ir.source?.label || 'Repository';
-  const eligible = ir.analysis.filesEligible ?? ir.analysis.filesSeen;
-  const signalCount = ir.nodes.length;
-  scanMeta.replaceChildren(
-    metaChip(`${ir.analysis.filesScanned}/${eligible} analyzable files sampled`),
-    metaChip(`${signalCount}/7 semantic areas have signals`),
-    metaChip(ir.analysis.scanComplete ? 'complete bounded scan' : 'partial bounded scan')
-  );
-  partialWarning.hidden = Boolean(ir.analysis.scanComplete);
-  if (!partialWarning.hidden) partialWarning.textContent = `Partial scan: ${ir.analysis.filesScanned} of ${eligible} analyzable files were sampled with implementation/config/test/documentation weighting. Unseen evidence remains unknown.`;
-  renderStory(ir); renderInspect(ir); renderSystem(ir);
-  resultNode.hidden = false;
-  resultNode.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-}
-function setBusy(busy, message = '') { analyzeButton.disabled = busy; analyzeButton.textContent = busy ? 'Analyzing…' : 'Analyze'; statusNode.textContent = message; }
-function showError(message) { errorNode.textContent = message; errorNode.hidden = false; }
-function clearError() { errorNode.hidden = true; errorNode.textContent = ''; }
-form.addEventListener('submit', async (event) => {
-  event.preventDefault(); clearError(); const repository = repositoryInput.value.trim(); if (!repository) return;
-  setBusy(true, 'Sampling repository surfaces and binding evidence by source quality…');
-  try {
-    const response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repository }) });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `Analysis failed (${response.status}).`);
-    render(payload.ir); statusNode.textContent = 'Analysis complete. Signals are bounded; unknowns stay explicit.';
-  } catch (error) { showError(error?.message || 'Analysis failed.'); statusNode.textContent = ''; }
-  finally { setBusy(false, statusNode.textContent); }
-});
-demoButton.addEventListener('click', () => { clearError(); repositoryInput.value = 'example/review-agent'; render(exampleIr()); statusNode.textContent = 'Example loaded. MAY is intentionally unknown to demonstrate CAN ≠ MAY.'; });
-tabs.forEach((tab) => tab.addEventListener('click', () => { const view = tab.dataset.view; tabs.forEach((candidate) => { const selected = candidate === tab; candidate.classList.toggle('active', selected); candidate.setAttribute('aria-selected', String(selected)); }); storyView.hidden = view !== 'story'; inspectView.hidden = view !== 'inspect'; systemView.hidden = view !== 'system'; }));
+function buildTree(files){const root={dirs:new Map,files:[]};for(const file of files){let n=root;const parts=file.path.split("/");parts.forEach((p,i)=>{if(i===parts.length-1)n.files.push(file);else{if(!n.dirs.has(p))n.dirs.set(p,{name:p,dirs:new Map,files:[]});n=n.dirs.get(p)}})}return root}
+function countTree(n){let c=n.files.length;for(const d of n.dirs.values())c+=countTree(d);return c}
+function renderTreeNode(n,host,depth=0){[...n.dirs.values()].sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{const details=el("details","tree-folder");if(depth<1)details.open=true;const s=el("summary","tree-folder-summary");s.append(el("span","chev","›"),el("span","",d.name),chip(String(countTree(d))));details.append(s);const ch=el("div","tree-children");renderTreeNode(d,ch,depth+1);details.append(ch);host.append(details)});n.files.sort((a,b)=>a.path.localeCompare(b.path)).forEach(f=>{const b=el("button","tree-file"+(state.activeFile===f.path?" active":""),f.path.split("/").pop());b.title=f.path;const meta=el("span","file-meta");meta.append(el("i","kind-dot "+f.sourceKind));if(evidencePaths().has(f.path))meta.append(el("b","evmark","E"));b.append(meta);b.onclick=()=>loadFile(f.path);host.append(b)})}
+function evidencePaths(){return new Set((state.ir?.nodes||[]).flatMap(n=>(n.evidence||[]).map(e=>e.path)))}
+function renderTree(){if(!state.inventory)return;const q=$("#file-search").value.trim().toLowerCase(),all=state.inventory.files||[],files=q?all.filter(f=>f.path.toLowerCase().includes(q)):all;$("#file-count").textContent=files.length+" "+t("fileCount");const h=$("#file-tree");h.replaceChildren();renderTreeNode(buildTree(files),h);$("#tree-warning").hidden=!state.inventory.treeTruncated;if(state.inventory.treeTruncated)$("#tree-warning").textContent=state.locale==="de"?"GitHub lieferte einen gekürzten Repository-Tree.":"GitHub returned a truncated repository tree."}
+$("#file-search").oninput=renderTree;
+async function loadInventory(repo){try{const r=await fetch("/api/repository",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository:repo})}),p=await r.json();if(!r.ok)throw Error(p.error||t("filesFail"));state.inventory=p;renderTree();return p}catch(e){$("#tree-warning").hidden=false;$("#tree-warning").textContent=e.message;return null}}
+async function loadFile(path,quiet=false){if(!state.repo)return;state.activeFile=path;renderTree();$("#file-empty").hidden=true;$("#file-detail").hidden=false;$("#file-role").textContent=t("fileLoad");$("#file-path").textContent=path;updateAssistantContext();try{const r=await fetch("/api/file",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository:state.repo,path})}),p=await r.json();if(!r.ok)throw Error(p.error||t("fileFail"));showFile(p.file)}catch(e){$("#file-role").textContent=t("fileFail");$("#file-summary").textContent=e.message}}
+function showFile(f){$("#file-role").textContent=f.role?.[state.locale]||f.sourceKind;$("#file-path").textContent=f.path;$("#file-summary").textContent=f.summary?.[state.locale]||"";const tags=$("#file-tags");tags.replaceChildren(chip(f.sourceKind));(f.semanticClasses||[]).forEach(c=>tags.append(chip(c,"semantic")));const facts=$("#file-facts");facts.replaceChildren(fact(t("role"),f.role?.[state.locale]||f.sourceKind),fact(t("areas"),(f.semanticClasses||[]).join(" · ")||"—"),fact(t("symbols"),(f.symbols||[]).join(", ")||"—"),fact(t("lines"),String(f.lineCount||"—")),fact(t("size"),fmtBytes(f.size)));$("#file-excerpt").textContent=f.excerpt||""}
+function fact(k,v){const d=el("div","file-fact");d.append(el("span","",k),el("strong","",v));return d}
+
+$("#analyze-form").onsubmit=async e=>{e.preventDefault();const repo=$("#repository").value.trim();if(!repo)return;state.repo=repo;state.ir=null;state.inventory=null;state.activeFile=null;state.chat=[];$("#error").hidden=true;$("#status").textContent=t("loading");$("#analyze-button").disabled=true;try{const [r]=await Promise.all([fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository:repo})}),loadInventory(repo)]);const p=await r.json();if(!r.ok)throw Error(p.error||"Analysis failed");state.ir=p.ir;renderAll();$("#status").textContent=t("done");renderSuggestions();updateAssistantContext()}catch(err){$("#error").textContent=err.message;$("#error").hidden=false;$("#status").textContent=""}finally{$("#analyze-button").disabled=false}};
+$("#assistant-fab").onclick=()=>{$("#assistant-panel").hidden=!$("#assistant-panel").hidden;if(!$("#assistant-panel").hidden)$("#assistant-input").focus()};$("#assistant-close").onclick=()=>$("#assistant-panel").hidden=true;
+function updateAssistantContext(){const n=$("#assistant-context");if(!state.repo){n.textContent=t("noRepo");$("#assistant-send").disabled=true}else{n.textContent=state.repo+(state.activeFile?" · "+(state.locale==="de"?"Aktives File":"Active file")+": "+state.activeFile:"");$("#assistant-send").disabled=false}}
+function renderSuggestions(){const h=$("#assistant-suggestions");h.replaceChildren();["suggest1","suggest2","suggest3"].forEach(k=>{const b=el("button","assistant-suggestion",t(k));b.type="button";b.onclick=()=>{$("#assistant-input").value=t(k);$("#assistant-input").focus()};h.append(b)})}
+function bubble(role,text,meta=""){const m=el("div","chat-message "+role);m.append(el("div","chat-bubble",text));if(meta)m.append(el("div","chat-meta",meta));$("#assistant-messages").append(m);$("#assistant-messages").scrollTop=$("#assistant-messages").scrollHeight}
+$("#assistant-form").onsubmit=async e=>{e.preventDefault();const q=$("#assistant-input").value.trim();if(!q||!state.repo)return;bubble("user",q);$("#assistant-input").value="";$("#assistant-send").disabled=true;$("#assistant-status").textContent=t("thinking");const history=state.chat.slice(-8);try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository:state.repo,question:q,locale:state.locale,activeFile:state.activeFile,history,context:state.ir})}),p=await r.json();if(!r.ok)throw Error(p.error||t("chatFail"));bubble("assistant",p.answer,p.model||"");state.chat.push({role:"user",content:q},{role:"assistant",content:p.answer})}catch(err){bubble("assistant",err.message.includes("not configured")?t("keyMissing"):err.message)}finally{$("#assistant-send").disabled=false;$("#assistant-status").textContent=""}};
+applyLocale();renderSuggestions();updateAssistantContext();
