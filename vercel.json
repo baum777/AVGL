@@ -30,6 +30,10 @@
     },
     "api/github-app/oauth-callback.mjs": {
       "maxDuration": 20
+    },
+    "api/asset-extract.mjs": {
+      "maxDuration": 30,
+      "includeFiles": "AVGL_FULL_ASSET_PACKAGE_LAYERED_PROJECTION.zip"
     }
   },
   "rewrites": [
