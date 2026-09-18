@@ -14,6 +14,7 @@
   <title>AVGL — Understand the agent, not the graph</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand-polish.css">
+  <link rel="stylesheet" href="/mobile-first.css">
 </head>
 <body>
   <header class="site-header">
@@ -21,12 +22,16 @@
       <img class="brand-logo" src="/assets/brand/01_logos/svg/avgl-primary-horizontal.svg" alt="AVGL — Agent Visual Grammar Language">
     </a>
     <div class="header-actions">
-      <div class="header-meta"><span class="status-dot" aria-hidden="true"></span><span>v0.5 · evidence-bound</span></div>
-      <button id="workspace-toggle" class="lang-toggle header-button" type="button" data-i18n="workspace">
-        <img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-workspace.svg">Workspace
-      </button>
-      <button id="github-connect" class="lang-toggle" type="button" data-i18n="connectGitHub">Connect GitHub</button>
+      <nav id="header-nav" class="header-nav">
+        <button id="workspace-toggle" class="lang-toggle header-button" type="button" data-i18n="workspace">
+          <img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-workspace.svg" alt="">Workspace
+        </button>
+        <button id="github-connect" class="lang-toggle" type="button" data-i18n="connectGitHub">Connect GitHub</button>
+        <a class="lang-toggle header-link" href="https://github.com/baum777/AVGL" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+        <a class="lang-toggle header-link" href="https://github.com/baum777/AVGL#readme" target="_blank" rel="noopener noreferrer">Documentation</a>
+      </nav>
       <button id="lang-toggle" class="lang-toggle language-button" type="button" aria-label="Switch language">DE</button>
+      <button id="header-menu" class="icon-button header-menu" type="button" aria-label="Open menu" aria-controls="header-nav" aria-expanded="false">⋯</button>
     </div>
   </header>
 
@@ -34,15 +39,9 @@
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-grid">
         <div class="hero-content">
-          <div class="hero-lockup" aria-hidden="true"><img src="/assets/brand/01_logos/svg/avgl-technical-lockup.svg" alt=""></div>
-      <p class="eyebrow">Agent Visual Grammar Language</p>
+          <p class="eyebrow">Agent Visual Grammar Language</p>
           <h1 id="hero-title"><span data-i18n="heroLine1">Understand the agent.</span><br><span class="muted-headline" data-i18n="heroLine2">Not the graph.</span></h1>
-          <p class="hero-copy" data-i18n="heroCopy">Analyze public repositories directly or connect GitHub for user-scoped private repositories. AVGL maps evidence into readable system stories, repository relations, and cross-repository workspaces.</p>
-          <div class="hero-principles" aria-label="AVGL core principles">
-            <span>STRUCTURE = EFFECT</span>
-            <span>ONE MODEL → MANY LENSES</span>
-            <span>UNKNOWN STAYS UNKNOWN</span>
-          </div>
+          <p class="hero-copy" data-i18n="heroLead">Evidence-bound system mapping for agentic repositories.</p>
         </div>
         <figure class="hero-visual">
           <img src="/assets/brand/07_mockups_reference/AVGL_concept_2_layered_projection_reference.png" alt="AVGL layered projection concept reference">
@@ -50,26 +49,30 @@
         </figure>
       </div>
 
-      <form id="analyze-form" class="repo-form">
+      <form id="analyze-form" class="repo-form card card-primary" data-analyze-state="public">
         <div class="form-title-row">
           <div>
             <p class="eyebrow">Start with evidence</p>
             <label for="repository" data-i18n="repoLabel">GitHub repository</label>
           </div>
-          <img class="form-icon" aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-analyze.svg">
         </div>
         <div class="source-mode-row">
-          <div class="scan-mode-toggle" role="group" aria-label="Repository source">
+          <div class="scan-mode-toggle source-toggle" role="group" aria-label="Repository source">
             <button id="source-public" class="scan-mode-button active" type="button" data-source-mode="public" data-i18n="publicRepo">Public URL</button>
             <button id="source-private" class="scan-mode-button" type="button" data-source-mode="github_app" data-i18n="privateRepo">Private GitHub</button>
           </div>
-          <span id="github-user-status" class="scan-mode-hint" data-i18n="publicMode">Public repository mode</span>
         </div>
+        <p id="github-user-status" class="scan-mode-hint" data-i18n="publicMode">Public repository mode</p>
         <div id="public-repo-input" class="input-row">
           <input id="repository" name="repository" type="text" inputmode="url" autocomplete="off" placeholder="github.com/owner/repository" required>
           <button id="analyze-button" class="primary-button" type="submit" data-i18n="analyze">Analyze</button>
         </div>
+        <div id="private-disconnected" class="private-disconnected" hidden>
+          <p class="scan-mode-hint" data-i18n="privateNeedsConnection">Private repositories require a GitHub connection.</p>
+          <button id="connect-github-cta" class="primary-button" type="button" data-i18n="connectGitHub">Connect GitHub</button>
+        </div>
         <div id="private-repo-input" class="private-repo-input" hidden>
+          <label class="scan-mode-label" for="private-repository" data-i18n="selectGrantedRepo">Repository</label>
           <select id="private-repository" aria-label="Private repository"></select>
           <button id="analyze-private-button" class="primary-button" type="button" data-i18n="analyze">Analyze</button>
         </div>
@@ -81,15 +84,12 @@
           </div>
           <span id="scan-mode-hint" class="scan-mode-hint" data-i18n="scanFullHint">Scans every eligible text/code file in the complete Git tree.</span>
         </div>
-        <div class="form-foot">
-          <p data-i18n="repoHelp">Public repositories work directly. Private repositories require a verified GitHub App user session.</p>
-        </div>
       </form>
       <div id="status" class="status" role="status" aria-live="polite"></div>
       <div id="error" class="error" role="alert" hidden></div>
     </section>
 
-    <section id="workspace-panel" class="result workspace-panel" hidden aria-live="polite">
+    <section id="workspace-panel" class="result workspace-panel card card-secondary" hidden aria-live="polite">
       <div class="result-head">
         <div>
           <p class="eyebrow">AVGL Workspace</p>
@@ -118,18 +118,18 @@
       <div id="workspace-result" class="workspace-result" hidden></div>
     </section>
 
-    <section id="result" class="result" hidden aria-live="polite">
+    <section id="result" class="result card card-primary" hidden aria-live="polite">
       <div class="result-head">
-        <div><p class="eyebrow" data-i18n="analysisEyebrow">Analysis</p><h2 id="result-title">Repository</h2></div>
+        <div><p class="eyebrow" data-i18n="analysisEyebrow">Your system</p><h2 id="result-title">Repository</h2></div>
         <div id="scan-meta" class="scan-meta"></div>
       </div>
       <div id="partial-warning" class="notice" hidden></div>
 
       <nav class="view-tabs" aria-label="Analysis views">
-        <button type="button" class="view-tab active" data-view="story" aria-selected="true"><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-agentic.svg"><span data-i18n="tabStory">Story</span></button>
-        <button type="button" class="view-tab" data-view="files" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-file.svg"><span data-i18n="tabFiles">Files</span></button>
-        <button type="button" class="view-tab" data-view="inspect" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-inspect.svg"><span data-i18n="tabInspect">Inspect</span></button>
-        <button type="button" class="view-tab" data-view="system" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-structure.svg"><span data-i18n="tabSystem">System</span></button>
+        <button type="button" class="view-tab active" data-view="story" aria-selected="true"><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-agentic.svg" alt=""><span data-i18n="tabStory">Story</span></button>
+        <button type="button" class="view-tab" data-view="files" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-file.svg" alt=""><span data-i18n="tabFiles">Files</span></button>
+        <button type="button" class="view-tab" data-view="inspect" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-inspect.svg" alt=""><span data-i18n="tabInspect">Inspect</span></button>
+        <button type="button" class="view-tab" data-view="system" aria-selected="false"><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-structure.svg" alt=""><span data-i18n="tabSystem">System</span></button>
       </nav>
 
       <div id="story-view" class="view-panel"></div>
@@ -149,6 +149,7 @@
         <div class="files-layout">
           <aside class="file-tree-panel" aria-label="Repository files">
             <div id="file-tree" class="file-tree"></div>
+            <button id="tree-toggle" class="tree-toggle" type="button" aria-expanded="true" data-i18n="hideTree">Hide repository tree</button>
           </aside>
           <section class="file-detail-panel" aria-live="polite">
             <div id="file-empty" class="file-empty">
@@ -189,23 +190,26 @@
       <div id="system-view" class="view-panel" hidden></div>
     </section>
 
-    <section class="brand-showcase" aria-labelledby="brand-system-title">
+    <section class="brand-showcase card card-secondary" aria-labelledby="brand-system-title">
       <div class="brand-showcase-head">
         <div>
-          <p class="eyebrow">Layered Projection Brand System</p>
-          <h2 id="brand-system-title">One model. Many lenses.</h2>
-          <p class="brand-showcase-copy">AVGL keeps one underlying system model stable while different lenses reveal structure, agentic behavior, context, inheritance, propagation, effective state and evidence. Geometry carries semantics; color reinforces state and selection.</p>
+          <p class="eyebrow">One model. Many lenses.</p>
+          <h2 id="brand-system-title">One underlying model. Different semantic projections.</h2>
+          <p class="brand-showcase-copy">Geometry carries semantics. Color reinforces state and selection.</p>
         </div>
-        <span class="brand-principle">STRUCTURE = EFFECT</span>
       </div>
 
-      <div class="brand-feature-grid">
-        <figure class="brand-feature-card primary">
-          <img src="/assets/brand/01_logos/svg/avgl-primary-horizontal.svg" alt="AVGL primary horizontal logo">
-        </figure>
-        <figure class="brand-feature-card reference">
-          <img src="/assets/brand/07_mockups_reference/AVGL_concept_2_layered_projection_reference.png" alt="AVGL layered projection reference">
-        </figure>
+      <figure class="brand-feature-card reference brand-preview">
+        <img src="/assets/brand/07_mockups_reference/AVGL_concept_2_layered_projection_reference.png" alt="AVGL layered projection reference">
+      </figure>
+
+      <div class="brand-lens-row" aria-label="Semantic lenses">
+        <span>Structure</span>
+        <span>Agentic</span>
+        <span>Context</span>
+        <span>Evidence</span>
+        <span>Effective</span>
+        <span>Propagation</span>
       </div>
 
       <div class="brand-core-row" aria-label="AVGL structural primitives">
@@ -221,19 +225,21 @@
 
       <img class="iconography-sheet showcase-sheet" src="/assets/brand/04_iconography/AVGL_iconography_contact_sheet.svg" alt="AVGL iconography contact sheet">
 
-      <details id="asset-library" class="asset-library">
+      <details id="asset-library" class="asset-library card-utility">
         <summary>
-          <span>Full AVGL asset library</span>
-          <span id="asset-count" class="asset-library-count">115 bundled assets</span>
+          <span>Asset library</span>
+          <span id="asset-count" class="asset-library-count">115 assets</span>
         </summary>
+        <input id="asset-search" class="asset-search" type="search" placeholder="Search assets" hidden>
+        <div id="asset-categories" class="asset-categories"></div>
         <div id="asset-library-grid" class="asset-library-grid" aria-live="polite"></div>
       </details>
     </section>
 
     <section class="principle-strip" aria-label="AVGL principles">
-      <div><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-effective.svg"><strong>CAN ≠ MAY</strong><span data-i18n="principleCanMay">Technical reach is not permission.</span></div>
-      <div><img aria-hidden="true" src="/assets/brand/04_iconography/lenses/avgl-evidence.svg"><strong>ACT ≠ DID</strong><span data-i18n="principleActDid">An effect path is not a verified result.</span></div>
-      <div><img aria-hidden="true" src="/assets/brand/04_iconography/states/avgl-unknown.svg"><strong>UNKNOWN stays UNKNOWN</strong><span data-i18n="principleUnknown">Missing evidence is never filled with a guess.</span></div>
+      <div><strong>CAN ≠ MAY</strong><span data-i18n="principleCanMay">Technical reach is not permission.</span></div>
+      <div><strong>ACT ≠ DID</strong><span data-i18n="principleActDid">An effect path is not a verified result.</span></div>
+      <div><strong>UNKNOWN STAYS UNKNOWN</strong><span data-i18n="principleUnknown">Missing evidence is never filled with a guess.</span></div>
     </section>
 
   </main>
@@ -243,14 +249,15 @@
     <span>DISCOVER → EXTRACT → CLASSIFY → BIND → RESOLVE RELATIONS → TRACE EFFECTS → SYNTHESIZE → PROJECT</span>
   </footer>
 
-  <button id="assistant-fab" class="assistant-fab" type="button" aria-haspopup="dialog" aria-controls="assistant-panel">
-    <img class="assistant-fab-icon" aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-assistant.svg"><span data-i18n="askAvgl">Ask AVGL</span>
+  <button id="assistant-fab" class="assistant-fab" type="button" aria-haspopup="dialog" aria-controls="assistant-panel" aria-label="Ask AVGL">
+    <img class="assistant-fab-icon" aria-hidden="true" src="/assets/brand/04_iconography/ui/avgl-assistant.svg" alt="">
+    <span data-i18n="askAvgl">Ask AVGL</span>
   </button>
 
   <section id="assistant-panel" class="assistant-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-title" hidden>
     <header class="assistant-head">
       <div>
-        <p class="eyebrow">AVGL Assistant</p>
+        <p class="eyebrow">✦ Ask AVGL</p>
         <h3 id="assistant-title" data-i18n="assistantTitle">Repository assistant</h3>
       </div>
       <button id="assistant-close" class="icon-button" type="button" aria-label="Close">×</button>
@@ -259,12 +266,12 @@
     <div id="assistant-messages" class="assistant-messages"></div>
     <div id="assistant-suggestions" class="assistant-suggestions"></div>
     <form id="assistant-form" class="assistant-form">
-      <textarea id="assistant-input" rows="2" maxlength="5000" data-i18n-placeholder="assistantPlaceholder" placeholder="Ask about architecture, a file, permissions, runtime…"></textarea>
+      <textarea id="assistant-input" rows="2" maxlength="5000" data-i18n-placeholder="assistantPlaceholder" placeholder="Ask about this repository…"></textarea>
       <button id="assistant-send" class="primary-button" type="submit" data-i18n="send">Send</button>
     </form>
     <div id="assistant-status" class="assistant-status"></div>
   </section>
 
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="/app-entry.js"></script>
 </body>
 </html>
