@@ -1,0 +1,15 @@
+:root{
+  --avgl-ink: #0B0D10;
+  --avgl-blue: #0066FF;
+  --avgl-offWhite: #F7F7F4;
+  --avgl-gray-700: #5F6672;
+  --avgl-gray-500: #8E949D;
+  --avgl-gray-300: #CFD3D8;
+  --avgl-gray-100: #ECEEF0;
+  --avgl-success: #1F9D55;
+  --avgl-warning: #F59E0B;
+  --avgl-error: #D92D20;
+  --avgl-font-sans: Inter, "Helvetica Neue", Arial, sans-serif;
+  --avgl-font-editorial: Georgia, "Times New Roman", serif;
+  --avgl-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}

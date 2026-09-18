@@ -1,0 +1,41 @@
+{
+  "color": {
+    "ink": "#0B0D10",
+    "blue": "#0066FF",
+    "offWhite": "#F7F7F4",
+    "gray700": "#5F6672",
+    "gray500": "#8E949D",
+    "gray300": "#CFD3D8",
+    "gray100": "#ECEEF0",
+    "success": "#1F9D55",
+    "warning": "#F59E0B",
+    "error": "#D92D20"
+  },
+  "typography": {
+    "sans": "Inter, Helvetica Neue, Arial, sans-serif",
+    "editorial": "Georgia, Times New Roman, serif",
+    "mono": "IBM Plex Mono, ui-monospace, monospace"
+  },
+  "geometry": {
+    "iconGrid": 24,
+    "iconStroke": 1.75,
+    "cornerRadius": 2,
+    "appRadius": 20,
+    "projectionOffset": 3
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64
+  ],
+  "principles": [
+    "STRUCTURE = EFFECT",
+    "ONE MODEL -> MANY LENSES",
+    "UNKNOWN STAYS UNKNOWN"
+  ]
+}
