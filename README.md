@@ -4,6 +4,12 @@
 
 > Show the story, not the graph.
 
+## Architecture authority
+
+The normative architecture and product intent are defined in [`AVGL_SOURCE_OF_TRUTH.md`](AVGL_SOURCE_OF_TRUTH.md). The scoped implementation path from the current v0.1 analyzer to the architecture-first v0.2 model is defined in [`AVGL_IMPLEMENTATION_WORKING_PLAN.md`](AVGL_IMPLEMENTATION_WORKING_PLAN.md).
+
+The current implementation below is the **v0.1 evidence-bound baseline**. Its `WHO → KNOW → THINK → CAN → MAY → ACT → DID` model remains valuable as the Agentic/Governance semantic spine, but it is not the universal AVGL kernel for v0.2.
+
 AVGL analyzes repositories and agent frameworks into a small semantic model that separates identity, context, cognition, technical reach, authority, effects, and evidence.
 
 ```text
@@ -26,7 +32,7 @@ Was kann reale Wirkung erzeugen?
 Wie wird das Ergebnis nachgewiesen?
 ```
 
-## v0.1 kernel
+## Current v0.1 semantic baseline
 
 The implementation uses an evidence-bound compiler pipeline:
 
@@ -101,7 +107,7 @@ MAY  Nicht belegt
 
 It must never silently convert technical reach into permission.
 
-## Core invariants
+## Current semantic invariants
 
 ```text
 HARNESS != AUTHORITY
@@ -142,12 +148,8 @@ Each semantic claim is bound to file/line/snippet evidence and one of:
 
 The v0.1 generic repository scanner emits `INFERRED` evidence. Future framework adapters and runtime traces can provide stronger evidence without changing the seven-class semantic backbone.
 
-## Next slices
+## Architecture-first next step
 
-1. framework-aware adapters and AST-backed JavaScript/TypeScript extraction;
-2. MCP manifest adapter;
-3. relation/call-path extraction;
-4. runtime trace ingestion;
-5. private repository authentication.
+The next implementation program is the v0.2 structural compiler defined in [`AVGL_IMPLEMENTATION_WORKING_PLAN.md`](AVGL_IMPLEMENTATION_WORKING_PLAN.md): structural materialization, multi-identity, evidence-bound typed relations, scope/inheritance/override resolution, effective state, propagation, lenses, and navigable spatial projections.
 
-See [`docs/AVGL_V0_1.md`](docs/AVGL_V0_1.md) for the concept.
+See [`AVGL_SOURCE_OF_TRUTH.md`](AVGL_SOURCE_OF_TRUTH.md) for the normative definition and [`docs/AVGL_V0_1.md`](docs/AVGL_V0_1.md) for the original v0.1 concept/baseline.
