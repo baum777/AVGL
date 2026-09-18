@@ -1,4 +1,4 @@
-export const SEMANTIC_RESOLVER_VERSION = '0.1';
+export const SEMANTIC_RESOLVER_VERSION = '0.2';
 
 const CANVAS_CONTEXT_PATTERNS = Object.freeze([
   /\.getContext\s*\(\s*['"`](?:2d|webgl2?|bitmaprenderer)['"`]\s*\)/i,
@@ -31,12 +31,12 @@ function windowText(lines, lineIndex, radius = 2) {
   return lines.slice(start, end).join('\n');
 }
 
-function accepted(rule, reason) {
-  return { accepted: true, mode: 'SEMANTIC', resolver: 'know.context.v1', rule, reason };
+function accepted(resolver, rule, reason) {
+  return { accepted: true, mode: 'SEMANTIC', resolver, rule, reason };
 }
 
-function rejected(rule, reason) {
-  return { accepted: false, mode: 'SEMANTIC', resolver: 'know.context.v1', rule, reason };
+function rejected(resolver, rule, reason) {
+  return { accepted: false, mode: 'SEMANTIC', resolver, rule, reason };
 }
 
 function resolveKnowContext({ path, line, lines, lineIndex }) {
@@ -46,6 +46,7 @@ function resolveKnowContext({ path, line, lines, lineIndex }) {
 
   if (CANVAS_CONTEXT_PATTERNS.some((pattern) => pattern.test(current))) {
     return rejected(
+      'know.context.v1',
       'canvas-rendering-context',
       'The token "context" resolves to a Canvas/WebGL rendering context, not an agentic context surface.'
     );
@@ -53,6 +54,7 @@ function resolveKnowContext({ path, line, lines, lineIndex }) {
 
   if (UI_CONTEXT_PATTERNS.some((pattern) => pattern.test(current))) {
     return rejected(
+      'know.context.v1',
       'ui-or-vm-context',
       'The token "context" resolves to a UI/framework or VM context rather than an agentic context surface.'
     );
@@ -60,6 +62,7 @@ function resolveKnowContext({ path, line, lines, lineIndex }) {
 
   if (MEMORY_RETRIEVAL_PATTERN.test(current) || MEMORY_RETRIEVAL_PATTERN.test(surrounding)) {
     return accepted(
+      'know.context.v1',
       'memory-retrieval-surface',
       'Memory or retrieval semantics provide an agentic KNOW surface.'
     );
@@ -67,6 +70,7 @@ function resolveKnowContext({ path, line, lines, lineIndex }) {
 
   if (STRONG_CONTEXT_PATTERNS.some((pattern) => pattern.test(current) || pattern.test(surrounding))) {
     return accepted(
+      'know.context.v1',
       'agentic-context-api',
       'The context token participates in an explicit agent/runtime context API or structured context field.'
     );
@@ -75,12 +79,14 @@ function resolveKnowContext({ path, line, lines, lineIndex }) {
   if (CONTEXT_PATTERN.test(current)) {
     if (SUPPORTING_AGENTIC_PATTERN.test(surrounding) || AGENTIC_PATH_PATTERN.test(pathText)) {
       return accepted(
+        'know.context.v1',
         'agentic-context-neighborhood',
         'The context token is supported by nearby agentic/runtime semantics or an agentic source path.'
       );
     }
 
     return rejected(
+      'know.context.v1',
       'unresolved-context-token',
       'A generic context token is insufficient to establish an agentic KNOW surface.'
     );
@@ -89,24 +95,123 @@ function resolveKnowContext({ path, line, lines, lineIndex }) {
   if (RESOURCE_PATTERN.test(current)) {
     if (SUPPORTING_AGENTIC_PATTERN.test(surrounding) || AGENTIC_PATH_PATTERN.test(pathText)) {
       return accepted(
+        'know.context.v1',
         'agentic-resource-neighborhood',
         'The resource/knowledge token is supported by nearby agentic/runtime semantics.'
       );
     }
 
     return rejected(
+      'know.context.v1',
       'generic-resource-token',
       'A generic resource/knowledge token is insufficient to establish an agentic KNOW surface.'
     );
   }
 
   return rejected(
+    'know.context.v1',
     'unresolved-know-candidate',
     'The lexical KNOW candidate could not be resolved to a supported agentic context, memory, retrieval, or resource surface.'
   );
 }
 
+
+const WHO_NEGATIVE_PATTERNS = Object.freeze([
+  {
+    rule: 'http-user-agent',
+    pattern: /\b(?:user[-_ ]?agent|userAgent)\b/i,
+    reason: 'HTTP/browser User-Agent metadata is not an agentic actor definition.'
+  },
+  {
+    rule: 'browser-worker',
+    pattern: /\b(?:new\s+(?:Shared)?Worker\s*\(|ServiceWorker|WorkerGlobalScope|serviceWorker\b)/i,
+    reason: 'A browser/service worker is a runtime primitive, not evidence of an agentic actor by itself.'
+  },
+  {
+    rule: 'ui-role',
+    pattern: /\brole\s*(?:=|:)\s*['"`](?:button|tab|dialog|navigation|main|menu|menuitem|checkbox|radio|presentation|status|alert|link|img|listbox|option|textbox|search)['"`]/i,
+    reason: 'A UI/ARIA role is not an agentic role definition.'
+  },
+  {
+    rule: 'ssh-agent',
+    pattern: /\bssh-agent\b/i,
+    reason: 'An SSH authentication agent is not an AVGL agent actor.'
+  }
+]);
+
+const WHO_DIRECT_PATTERNS = Object.freeze([
+  /\b(?:create|define|register|build|spawn)Agent\s*\(/i,
+  /\bnew\s+(?:Agent|Assistant|Orchestrator)\s*\(/,
+  /\bclass\s+\w*(?:Agent|Assistant|Orchestrator)\w*\b/,
+  /\b(?:systemPrompt|system_prompt)\b/,
+  /\bharness\b/i
+]);
+
+const WHO_DECLARATION_PATTERN = /\b(?:agent|assistant|worker|role|instructions?)\b/i;
+const WHO_SUPPORTING_PATTERN = /\b(model|llm|tools?|mcp|prompt|systemPrompt|system_prompt|instructions?|workflow|task|memory|context|capabilit(?:y|ies)|delegate|handoff|planner|executor)\b/i;
+const WHO_PATH_PATTERN = /(?:^|[\/_.-])(agents?|assistant|harness|orchestrator|swarm|crew|runtime|workflow)(?:[\/_.-]|$)/i;
+const WHO_STRUCTURED_PATTERN = /\b(?:agent|assistant|worker)\s*[:=]\s*[{[]|\brole\s*[:=]\s*['"`][^'"`]+['"`]/i;
+
+function resolveWhoActor({ path, line, lines, lineIndex }) {
+  const current = String(line ?? '');
+  const surrounding = windowText(lines ?? [current], lineIndex ?? 0);
+  const pathText = String(path ?? '');
+
+  for (const negative of WHO_NEGATIVE_PATTERNS) {
+    if (negative.pattern.test(current)) {
+      return rejected('who.actor.v1', negative.rule, negative.reason);
+    }
+  }
+
+  if (WHO_DIRECT_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'who.actor.v1',
+      'explicit-agent-harness-definition',
+      'The source contains an explicit agent, assistant, orchestrator, system-prompt, or harness definition.'
+    );
+  }
+
+  if (WHO_STRUCTURED_PATTERN.test(current) && WHO_SUPPORTING_PATTERN.test(surrounding)) {
+    return accepted(
+      'who.actor.v1',
+      'structured-actor-definition',
+      'The actor/role declaration is structurally coupled to agentic model, prompt, tool, workflow, or instruction semantics.'
+    );
+  }
+
+  if (WHO_DECLARATION_PATTERN.test(current)) {
+    if (WHO_PATH_PATTERN.test(pathText) && WHO_SUPPORTING_PATTERN.test(surrounding)) {
+      return accepted(
+        'who.actor.v1',
+        'agentic-actor-neighborhood',
+        'The actor token occurs inside an agentic/harness source path with supporting runtime semantics.'
+      );
+    }
+
+    if (/\b(agent|assistant)\b/i.test(current) && WHO_SUPPORTING_PATTERN.test(surrounding)) {
+      return accepted(
+        'who.actor.v1',
+        'supported-agent-reference',
+        'The agent/assistant reference is supported by nearby model, prompt, tool, workflow, or instruction semantics.'
+      );
+    }
+
+    return rejected(
+      'who.actor.v1',
+      'unresolved-actor-token',
+      'A generic agent, assistant, worker, role, or instruction token is insufficient to establish WHO.'
+    );
+  }
+
+  return rejected(
+    'who.actor.v1',
+    'unresolved-who-candidate',
+    'The WHO lexical candidate could not be resolved to an agentic actor or harness definition.'
+  );
+}
+
 export function resolveSemanticCandidate(candidate) {
+  if (candidate?.detector?.id === 'who.agent-definition') return resolveWhoActor(candidate);
   if (candidate?.detector?.id === 'know.context-resource') return resolveKnowContext(candidate);
 
   return {
