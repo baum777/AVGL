@@ -1,4 +1,4 @@
-export const SEMANTIC_RESOLVER_VERSION = '0.3';
+export const SEMANTIC_RESOLVER_VERSION = '0.4';
 
 const CANVAS_CONTEXT_PATTERNS = Object.freeze([
   /\.getContext\s*\(\s*['"`](?:2d|webgl2?|bitmaprenderer)['"`]\s*\)/i,
@@ -334,10 +334,210 @@ function resolveThinkCognition({ path, line, lines, lineIndex, sourceKind }) {
   );
 }
 
+
+const CAN_NEGATIVE_PATTERNS = Object.freeze([
+  {
+    rule: 'ui-layout-shell',
+    pattern: /\b(?:app|page|layout|navigation|desktop|window)\s+shell\b|\bshell\s+(?:layout|component|view)\b/i,
+    reason: 'A UI/application shell is not an executable agent capability surface.'
+  },
+  {
+    rule: 'generic-domain-tool',
+    pattern: /\btool\s*[:=]\s*["'\x60](?:hammer|brush|pen|pencil|wrench|screwdriver|knife|camera|instrument)["'\x60]/i,
+    reason: 'A generic domain tool value is not an agentic executable tool surface.'
+  },
+  {
+    rule: 'diagram-connector',
+    pattern: /\b(?:diagram|node|edge|canvas)\.(?:connector|adapter)\b|\b(?:diagram|visual|ui)\s+(?:connector|adapter)\b/i,
+    reason: 'A visual/UI connector or adapter is not an agent capability by itself.'
+  },
+  {
+    rule: 'browser-metadata',
+    pattern: /\b(?:browserName|browserVersion|browser\s+compatibility|supported\s+browsers?)\b/i,
+    reason: 'Browser metadata or compatibility information does not establish browser automation capability.'
+  }
+]);
+
+const CAN_TOOL_REGISTRATION_PATTERNS = Object.freeze([
+  /\b(?:registerTool|defineTool|createTool)\s*\(/,
+  /\b(?:server|mcp|mcpServer)\.tool\s*\(/i,
+  /\btools\s*:\s*\[/i,
+  /\b(?:function_call|functionCall|tool_choice|toolChoice)\s*[:=]/,
+  /\btool\s*:\s*\{\s*(?:name|description|inputSchema|parameters)\b/i
+]);
+
+const CAN_MCP_PATTERNS = Object.freeze([
+  /\bnew\s+McpServer\s*\(/,
+  /\bMcpServer\s*\(/,
+  /\bmcpServers\s*[:=]/,
+  /@modelcontextprotocol\/sdk/i,
+  /\b(?:callTool|listTools)\s*\(/
+]);
+
+const CAN_NETWORK_PATTERNS = Object.freeze([
+  /\bfetch\s*\(/,
+  /\bclient\.request\s*\(/,
+  /\bapiClient(?:\.[A-Za-z_$][\w$]*)?\s*\(/,
+  /\b(?:axios|ky|got)\.(?:get|post|put|patch|delete|request)\s*\(/i
+]);
+
+const CAN_BROWSER_PATTERNS = Object.freeze([
+  /\b(?:playwright|puppeteer)\b/i,
+  /\b(?:chromium|firefox|webkit)\.launch\s*\(/,
+  /\bbrowser\.(?:newPage|newContext|pages|contexts|close)\s*\(/,
+  /\bpage\.(?:goto|click|fill|type|locator|evaluate|screenshot)\s*\(/
+]);
+
+const CAN_SHELL_PATTERNS = Object.freeze([
+  /\bshell\.(?:exec|run|command|spawn)\s*\(/i,
+  /\bshell\s*:\s*(?:true|["'\x60](?:bash|sh|zsh|powershell|pwsh)["'\x60])/i
+]);
+
+const CAN_GENERIC_PATTERN = /\b(?:tool|tools|mcp|browser|shell|adapter|connector|apiClient)\b/i;
+const CAN_AGENTIC_SUPPORT_PATTERN = /\b(agent|assistant|workflow|runtime|model|llm|prompt|capabilit(?:y|ies)|tool|mcp|executor|integration|provider|api|client)\b/i;
+const CAN_ADAPTER_SUPPORT_PATTERN = /\b(tool|mcp|api|client|provider|runtime|agent|workflow|capabilit(?:y|ies)|execute|invoke|request|send|read|write)\b/i;
+const CAN_PATH_PATTERN = /(?:^|[\/_.-])(agents?|tools?|mcp|capabilit(?:y|ies)|runtime|integrations?|adapters?|connectors?|browser|shell|providers?|clients?)(?:[\/_.-]|$)/i;
+
+function resolveCanCapability({ path, line, lines, lineIndex, sourceKind }) {
+  const current = String(line ?? '');
+  const surrounding = windowText(lines ?? [current], lineIndex ?? 0);
+  const pathText = String(path ?? '');
+
+  for (const negative of CAN_NEGATIVE_PATTERNS) {
+    if (negative.pattern.test(current)) {
+      return rejected('can.capability.v1', negative.rule, negative.reason);
+    }
+  }
+
+  if (CAN_MCP_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation' || sourceKind === 'config') {
+      return accepted(
+        'can.capability.v1',
+        'explicit-mcp-capability',
+        'The implementation/config source exposes an explicit MCP server or tool capability surface.'
+      );
+    }
+    return rejected(
+      'can.capability.v1',
+      'non-runtime-mcp-mention',
+      'An MCP mention outside implementation/config evidence is insufficient to establish technical reachability.'
+    );
+  }
+
+  if (CAN_TOOL_REGISTRATION_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (
+      sourceKind === 'implementation' ||
+      sourceKind === 'config' ||
+      CAN_PATH_PATTERN.test(pathText)
+    ) {
+      return accepted(
+        'can.capability.v1',
+        'explicit-tool-surface',
+        'The source explicitly registers, defines, or configures callable tools/functions.'
+      );
+    }
+  }
+
+  if (CAN_NETWORK_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation') {
+      return accepted(
+        'can.capability.v1',
+        'network-client-reachability',
+        'A concrete network client callsite proves static technical reachability; it does not prove permission or runtime execution.'
+      );
+    }
+    return rejected(
+      'can.capability.v1',
+      'non-implementation-network-mention',
+      'A network-client mention outside implementation code is insufficient to establish technical reachability.'
+    );
+  }
+
+  if (CAN_BROWSER_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation') {
+      return accepted(
+        'can.capability.v1',
+        'browser-automation-surface',
+        'The implementation contains a concrete browser automation API surface.'
+      );
+    }
+    return rejected(
+      'can.capability.v1',
+      'non-implementation-browser-mention',
+      'A browser mention outside implementation code is insufficient to establish browser automation capability.'
+    );
+  }
+
+  if (CAN_SHELL_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (
+      sourceKind === 'implementation' &&
+      (CAN_AGENTIC_SUPPORT_PATTERN.test(surrounding) || CAN_PATH_PATTERN.test(pathText))
+    ) {
+      return accepted(
+        'can.capability.v1',
+        'shell-capability-surface',
+        'The shell surface is coupled to an agentic/runtime capability context.'
+      );
+    }
+    return rejected(
+      'can.capability.v1',
+      'unresolved-shell-surface',
+      'A shell token or generic shell configuration is insufficient to establish an agent capability.'
+    );
+  }
+
+  if (/\b(?:adapter|connector)\b/i.test(current)) {
+    if (
+      (sourceKind === 'implementation' || sourceKind === 'config') &&
+      CAN_PATH_PATTERN.test(pathText) &&
+      CAN_ADAPTER_SUPPORT_PATTERN.test(surrounding)
+    ) {
+      return accepted(
+        'can.capability.v1',
+        'capability-adapter-surface',
+        'The adapter/connector is located in a capability/integration surface and is coupled to executable client/tool semantics.'
+      );
+    }
+
+    return rejected(
+      'can.capability.v1',
+      'unresolved-adapter-connector',
+      'A generic adapter or connector token is insufficient to establish technical capability.'
+    );
+  }
+
+  if (CAN_GENERIC_PATTERN.test(current)) {
+    if (
+      (sourceKind === 'implementation' || sourceKind === 'config') &&
+      CAN_PATH_PATTERN.test(pathText) &&
+      CAN_AGENTIC_SUPPORT_PATTERN.test(surrounding)
+    ) {
+      return accepted(
+        'can.capability.v1',
+        'supported-capability-reference',
+        'The capability token is supported by an agentic runtime/tool path and nearby executable semantics.'
+      );
+    }
+
+    return rejected(
+      'can.capability.v1',
+      'unresolved-capability-token',
+      'A generic tool, browser, shell, adapter, connector, or API-client token is insufficient to establish CAN.'
+    );
+  }
+
+  return rejected(
+    'can.capability.v1',
+    'unresolved-can-candidate',
+    'The CAN lexical candidate could not be resolved to a supported executable capability surface.'
+  );
+}
+
 export function resolveSemanticCandidate(candidate) {
   if (candidate?.detector?.id === 'who.agent-definition') return resolveWhoActor(candidate);
   if (candidate?.detector?.id === 'know.context-resource') return resolveKnowContext(candidate);
   if (candidate?.detector?.id === 'think.model-cognition') return resolveThinkCognition(candidate);
+  if (candidate?.detector?.id === 'can.tool-surface') return resolveCanCapability(candidate);
 
   return {
     accepted: true,
