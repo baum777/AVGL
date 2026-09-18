@@ -4,6 +4,12 @@
 
 > Show the story, not the graph.
 
+## Architecture authority
+
+The normative architecture and product intent are defined in [`AVGL_SOURCE_OF_TRUTH.md`](AVGL_SOURCE_OF_TRUTH.md). The scoped implementation path is defined in [`AVGL_IMPLEMENTATION_WORKING_PLAN.md`](AVGL_IMPLEMENTATION_WORKING_PLAN.md).
+
+The current v0.5 implementation is an evidence-bound transition baseline. `WHO → KNOW → THINK → CAN → MAY → ACT → DID` remains an Agentic/Governance vocabulary and projection, but it is not the universal AVGL kernel.
+
 AVGL analyzes repositories and agent frameworks into a small semantic model that separates identity, context, cognition, technical reach, authority, effects, and evidence.
 
 ```text
@@ -26,7 +32,7 @@ Was kann reale Wirkung erzeugen?
 Wie wird das Ergebnis nachgewiesen?
 ```
 
-## v0.1 kernel
+## Current semantic baseline
 
 The implementation uses an evidence-bound compiler pipeline:
 
@@ -76,7 +82,7 @@ STORY → INSPECT → SYSTEM
 
 The web endpoint accepts a public GitHub repository URL or `owner/repo`, performs a bounded static scan, and returns the same AVGL IR used by the local CLI.
 
-Private GitHub repository authentication is intentionally not part of this slice. A server-side `GITHUB_TOKEN` is supported when configured by the deployment environment; the token is never accepted from the browser.
+The v0.5 preview supports public repositories plus verified user-scoped GitHub App access for selected private repositories. Private source remains server-side and the remote assistant stays disabled for private-repository context by default.
 
 ## Quick start
 
@@ -101,7 +107,7 @@ MAY  Nicht belegt
 
 It must never silently convert technical reach into permission.
 
-## Core invariants
+## Current semantic invariants
 
 ```text
 HARNESS != AUTHORITY
@@ -142,12 +148,8 @@ Each semantic claim is bound to file/line/snippet evidence and one of:
 
 The v0.1 generic repository scanner emits `INFERRED` evidence. Future framework adapters and runtime traces can provide stronger evidence without changing the seven-class semantic backbone.
 
-## Next slices
+## Architecture-first next step
 
-1. framework-aware adapters and AST-backed JavaScript/TypeScript extraction;
-2. MCP manifest adapter;
-3. relation/call-path extraction;
-4. runtime trace ingestion;
-5. private repository authentication.
+The active implementation program is defined in [`AVGL_IMPLEMENTATION_WORKING_PLAN.md`](AVGL_IMPLEMENTATION_WORKING_PLAN.md): structural materialization, multi-identity, evidence-bound typed relations, scope/inheritance/override resolution, effective state, propagation, lenses, and navigable system projections.
 
-See [`docs/AVGL_V0_1.md`](docs/AVGL_V0_1.md) for the concept.
+See [`AVGL_SOURCE_OF_TRUTH.md`](AVGL_SOURCE_OF_TRUTH.md) for the normative definition and [`docs/AVGL_V0_1.md`](docs/AVGL_V0_1.md) for the original baseline concept.
