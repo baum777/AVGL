@@ -1,0 +1,29 @@
+{
+  "label": "unitera",
+  "repositories": [
+    {
+      "id": "control-plane",
+      "path": "../unitera_control_plane",
+      "revision": "PINNED_COMMIT_SHA",
+      "provides": ["@unitera/control-plane"],
+      "dependsOn": ["registry"]
+    },
+    {
+      "id": "registry",
+      "path": "../unitera-registry",
+      "revision": "PINNED_COMMIT_SHA",
+      "provides": ["@unitera/registry"]
+    }
+  ],
+  "relations": [
+    {
+      "type": "GOVERNS",
+      "from": "registry",
+      "to": "control-plane",
+      "evidence": {
+        "source": "workspace-manifest"
+      },
+      "note": "Example explicit governance relation."
+    }
+  ]
+}
