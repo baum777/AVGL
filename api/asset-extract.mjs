@@ -8,7 +8,19 @@ const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
 const LOC_SIG = 0x04034b50;
 
-function parseEntries(buf) {
+const MIME_BY_EXT = new Map([
+  [".svg", "image/svg+xml; charset=utf-8"],
+  [".png", "image/png"],
+  [".ico", "image/x-icon"],
+  [".json", "application/json; charset=utf-8"],
+  [".css", "text/css; charset=utf-8"],
+  [".md", "text/markdown; charset=utf-8"],
+  [".txt", "text/plain; charset=utf-8"],
+  [".pdf", "application/pdf"],
+  [".webmanifest", "application/manifest+json; charset=utf-8"]
+]);
+
+export function parseEntries(buf) {
   const min = Math.max(0, buf.length - 0xffff - 22);
   let eocd = -1;
   for (let i = buf.length - 22; i >= min; i--) {
@@ -38,22 +50,7 @@ function parseEntries(buf) {
   return entries;
 }
 
-function contentTypeFor(name) {
-  const ext = path.extname(name).toLowerCase();
-  return ({
-    ".svg": "image/svg+xml",
-    ".png": "image/png",
-    ".ico": "image/x-icon",
-    ".pdf": "application/pdf",
-    ".json": "application/json; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".md": "text/markdown; charset=utf-8",
-    ".txt": "text/plain; charset=utf-8",
-    ".webmanifest": "application/manifest+json; charset=utf-8"
-  })[ext] || "application/octet-stream";
-}
-
-function extractEntry(buf, entry) {
+export function extractEntry(buf, entry) {
   const p = entry.localOffset;
   if (buf.readUInt32LE(p) !== LOC_SIG) throw new Error("Invalid local header");
   const nameLen = buf.readUInt16LE(p + 26);
@@ -63,6 +60,14 @@ function extractEntry(buf, entry) {
   if (entry.method === 0) return Buffer.from(compressed);
   if (entry.method === 8) return zlib.inflateRawSync(compressed);
   throw new Error(`Unsupported compression method ${entry.method}`);
+}
+
+function isSafePath(value) {
+  return typeof value === "string" &&
+    value.length > 0 &&
+    !value.includes("..") &&
+    !value.startsWith("/") &&
+    value.startsWith("AVGL_FULL_ASSET_PACKAGE/");
 }
 
 export default async function handler(req, res) {
@@ -97,19 +102,17 @@ export default async function handler(req, res) {
     }
 
     const requested = typeof req.query?.path === "string" ? req.query.path : "";
-    if (!requested) return res.status(400).json({ error: "path_required" });
-    if (requested.includes("..") || requested.startsWith("/")) {
-      return res.status(400).json({ error: "invalid_path" });
-    }
+    if (!isSafePath(requested)) return res.status(400).json({ error: "invalid_path" });
 
     const entry = entries.find((e) => e.name === requested);
     if (!entry) return res.status(404).json({ error: "not_found" });
     const out = extractEntry(zip, entry);
 
     if (req.query?.raw === "1") {
-      res.setHeader("Content-Type", contentTypeFor(entry.name));
-      res.setHeader("Content-Length", String(out.length));
+      const ext = path.extname(entry.name).toLowerCase();
+      res.setHeader("Content-Type", MIME_BY_EXT.get(ext) || "application/octet-stream");
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.setHeader("Content-Length", String(out.length));
       return res.status(200).send(out);
     }
 
