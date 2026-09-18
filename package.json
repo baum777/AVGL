@@ -10,8 +10,8 @@
   "scripts": {
     "test": "node --test",
     "check": "node --check src/*.js && node --check bin/avgl.js && node --check api/*.mjs && node --check api/github-app/*.mjs && node --check web/*.js",
-    "assets:extract": "node ./scripts/extract-brand-assets.mjs",
-    "assets:list": "node ./scripts/extract-brand-assets.mjs --list",
+    "assets:extract": "node ./scripts/materialize-brand-assets.mjs",
+    "assets:list": "node ./scripts/materialize-brand-assets.mjs --list",
     "build:assets": "node ./scripts/materialize-brand-assets.mjs",
     "build": "node ./scripts/materialize-brand-assets.mjs"
   },
