@@ -1,4 +1,4 @@
-export const SEMANTIC_RESOLVER_VERSION = '0.4';
+export const SEMANTIC_RESOLVER_VERSION = '0.5';
 
 const CANVAS_CONTEXT_PATTERNS = Object.freeze([
   /\.getContext\s*\(\s*['"`](?:2d|webgl2?|bitmaprenderer)['"`]\s*\)/i,
@@ -533,11 +533,205 @@ function resolveCanCapability({ path, line, lines, lineIndex, sourceKind }) {
   );
 }
 
+
+const MAY_NEGATIVE_PATTERNS = Object.freeze([
+  {
+    rule: 'privacy-or-editorial-policy',
+    pattern: /\b(?:privacy|cookie|editorial|retention|insurance|company)\s+policy\b/i,
+    reason: 'A general policy document or business policy is not an executable authority control.'
+  },
+  {
+    rule: 'research-or-financial-grant',
+    pattern: /\b(?:research|academic|funding|financial|government)\s+grant\b|\bgrant\s+(?:amount|funding|application|proposal)\b/i,
+    reason: 'A research/funding grant is not an execution authority grant.'
+  },
+  {
+    rule: 'approval-rating',
+    pattern: /\bapproval\s+(?:rating|score|survey|poll|rate)\b/i,
+    reason: 'An approval metric is not a human or policy approval gate.'
+  },
+  {
+    rule: 'generic-program-scope',
+    pattern: /\b(?:lexical|variable|function|module|package|project|query|css)\s+scope\b|\bscope\s*=\s*(?:bounds|range|query|module|project)\b/i,
+    reason: 'A generic programming/domain scope is not an authority scope.'
+  },
+  {
+    rule: 'certificate-revocation',
+    pattern: /\b(?:certificate|cert|crl|ocsp)\s+revok(?:e|ed|ation)\b/i,
+    reason: 'Certificate revocation is not an AVGL authority revocation surface by itself.'
+  }
+]);
+
+const MAY_PERMISSION_CHECK_PATTERNS = Object.freeze([
+  /\b(?:requirePermission|checkPermission|hasPermission|assertPermission)\s*\(/,
+  /\bpermissions?\.(?:has|includes|allows?|check|require)\s*\(/i,
+  /\b(?:permission|permissions)\s*[:=]\s*(?:\{|\[)/i
+]);
+
+const MAY_POLICY_ENFORCEMENT_PATTERNS = Object.freeze([
+  /\b(?:evaluatePolicy|enforcePolicy|authorize|authorise|isAuthorized|isAuthorised)\s*\(/,
+  /\bpolicy\.(?:evaluate|enforce|allows?|authorize|authorise|check)\s*\(/i,
+  /\bif\s*\([^)]*\b(?:authorized|authorised)\b[^)]*\)/i
+]);
+
+const MAY_APPROVAL_PATTERNS = Object.freeze([
+  /\b(?:requireApproval|approvalGate|awaitApproval|requestApproval)\s*\(/,
+  /\bapproval\.(?:require|check|approve|reject|status)\b/i,
+  /\b(?:approvalStatus|approval_state)\s*[:=]/i,
+  /\b(?:approvedBy|approved_by)\s*[:=]/i
+]);
+
+const MAY_GRANT_PATTERNS = Object.freeze([
+  /\b(?:issueGrant|createGrant|validateGrant|consumeGrant|revokeGrant)\s*\(/,
+  /\bgrant\.(?:validate|consume|revoke|isValid|expiresAt|capabilities|scope)\b/i,
+  /\b(?:grantId|grant_id|grantToken|grant_token)\s*[:=]/i
+]);
+
+const MAY_SCOPE_PATTERNS = Object.freeze([
+  /\b(?:requireScope|checkScope|validateScope)\s*\(/,
+  /\bscopes?\.(?:has|includes|allows?|check|require)\s*\(/i,
+  /\ballowedScopes?\s*[:=]/i,
+  /\brequiredScopes?\s*[:=]/i
+]);
+
+const MAY_REVOCATION_PATTERNS = Object.freeze([
+  /\b(?:revokeGrant|revokePermission|revokeAuthorization|revokeAuthority)\s*\(/i,
+  /\b(?:isRevoked|revokedAt|revoked_at|revocationReason|revocation_reason)\s*[:=]/i,
+  /\brevocation\.(?:check|enforce|record|cascade)\s*\(/i
+]);
+
+const MAY_AUTHORITY_PATH_PATTERN = /(?:^|[\/_.-])(policy|policies|auth|authorization|authority|permissions?|approvals?|grants?|scopes?|governance|security)(?:[\/_.-]|$)/i;
+const MAY_AUTHORITY_SUPPORT_PATTERN = /\b(agent|assistant|tool|workflow|runtime|action|capabilit(?:y|ies)|execute|effect|request|subject|principal|resource|operation)\b/i;
+const MAY_GENERIC_PATTERN = /\b(?:policy|permission|permissions|approval|approved|grant|grants|authorize|authorise|authorized|authorised|revok(?:e|ed|ation)|delegation|scope|scopes)\b/i;
+
+function resolveMayAuthority({ path, line, lines, lineIndex, sourceKind }) {
+  const current = String(line ?? '');
+  const surrounding = windowText(lines ?? [current], lineIndex ?? 0);
+  const pathText = String(path ?? '');
+
+  for (const negative of MAY_NEGATIVE_PATTERNS) {
+    if (negative.pattern.test(current)) {
+      return rejected('may.authority.v1', negative.rule, negative.reason);
+    }
+  }
+
+  if (MAY_PERMISSION_CHECK_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation' || sourceKind === 'config' || sourceKind === 'test') {
+      return accepted(
+        'may.authority.v1',
+        'permission-binding',
+        'The source explicitly checks, requires, asserts, or configures permissions.'
+      );
+    }
+    return rejected(
+      'may.authority.v1',
+      'non-enforcing-permission-mention',
+      'Permission vocabulary outside implementation/config/test evidence is insufficient to establish MAY.'
+    );
+  }
+
+  if (MAY_POLICY_ENFORCEMENT_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation' || sourceKind === 'test') {
+      return accepted(
+        'may.authority.v1',
+        'policy-authorization-enforcement',
+        'The source evaluates or enforces an authorization/policy decision.'
+      );
+    }
+    return rejected(
+      'may.authority.v1',
+      'non-enforcing-policy-mention',
+      'Policy vocabulary without an enforcement surface is insufficient to establish MAY.'
+    );
+  }
+
+  if (MAY_APPROVAL_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (
+      (sourceKind === 'implementation' || sourceKind === 'config' || sourceKind === 'test') &&
+      (MAY_AUTHORITY_PATH_PATTERN.test(pathText) || MAY_AUTHORITY_SUPPORT_PATTERN.test(surrounding))
+    ) {
+      return accepted(
+        'may.authority.v1',
+        'approval-gate',
+        'The source implements or configures an approval gate tied to an agentic/runtime operation.'
+      );
+    }
+    return rejected(
+      'may.authority.v1',
+      'unresolved-approval-token',
+      'Approval vocabulary without an authority-bound gate is insufficient to establish MAY.'
+    );
+  }
+
+  if (MAY_GRANT_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation' || sourceKind === 'config' || sourceKind === 'test') {
+      return accepted(
+        'may.authority.v1',
+        'authority-grant-lifecycle',
+        'The source creates, validates, consumes, identifies, or revokes an execution authority grant.'
+      );
+    }
+    return rejected(
+      'may.authority.v1',
+      'non-runtime-grant-mention',
+      'Grant vocabulary outside executable/config/test authority evidence is insufficient to establish MAY.'
+    );
+  }
+
+  if (MAY_SCOPE_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (
+      (sourceKind === 'implementation' || sourceKind === 'config' || sourceKind === 'test') &&
+      (MAY_AUTHORITY_PATH_PATTERN.test(pathText) || MAY_AUTHORITY_SUPPORT_PATTERN.test(surrounding))
+    ) {
+      return accepted(
+        'may.authority.v1',
+        'authority-scope-enforcement',
+        'The source explicitly requires, validates, or configures authority scopes.'
+      );
+    }
+    return rejected(
+      'may.authority.v1',
+      'unresolved-scope-token',
+      'Scope vocabulary without authority/runtime binding is insufficient to establish MAY.'
+    );
+  }
+
+  if (MAY_REVOCATION_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation' || sourceKind === 'config' || sourceKind === 'test') {
+      return accepted(
+        'may.authority.v1',
+        'authority-revocation',
+        'The source models or enforces revocation of execution authority.'
+      );
+    }
+    return rejected(
+      'may.authority.v1',
+      'non-authority-revocation-mention',
+      'Revocation vocabulary outside executable/config/test authority evidence is insufficient to establish MAY.'
+    );
+  }
+
+  if (MAY_GENERIC_PATTERN.test(current)) {
+    return rejected(
+      'may.authority.v1',
+      'unresolved-authority-token',
+      'Generic permission, policy, approval, grant, scope, delegation, authorization, or revocation vocabulary is insufficient to establish MAY.'
+    );
+  }
+
+  return rejected(
+    'may.authority.v1',
+    'unresolved-may-candidate',
+    'The MAY lexical candidate could not be resolved to an evidence-bound authority control.'
+  );
+}
+
 export function resolveSemanticCandidate(candidate) {
   if (candidate?.detector?.id === 'who.agent-definition') return resolveWhoActor(candidate);
   if (candidate?.detector?.id === 'know.context-resource') return resolveKnowContext(candidate);
   if (candidate?.detector?.id === 'think.model-cognition') return resolveThinkCognition(candidate);
   if (candidate?.detector?.id === 'can.tool-surface') return resolveCanCapability(candidate);
+  if (candidate?.detector?.id === 'may.authority-control') return resolveMayAuthority(candidate);
 
   return {
     accepted: true,
