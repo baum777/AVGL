@@ -1,4 +1,4 @@
-export const SEMANTIC_RESOLVER_VERSION = '0.2';
+export const SEMANTIC_RESOLVER_VERSION = '0.3';
 
 const CANVAS_CONTEXT_PATTERNS = Object.freeze([
   /\.getContext\s*\(\s*['"`](?:2d|webgl2?|bitmaprenderer)['"`]\s*\)/i,
@@ -210,9 +210,134 @@ function resolveWhoActor({ path, line, lines, lineIndex }) {
   );
 }
 
+
+const THINK_NEGATIVE_PATTERNS = Object.freeze([
+  {
+    rule: 'data-or-orm-model',
+    pattern: /(?:\bmongoose\.model\b|\bsequelize\.define\b|\bdatabase\.models?\b|\bdb\.models?\b|\bViewModel\b|\bDataModel\b|\bDomainModel\b|\bmodel\s+\w+\s*\{|\bdata\s+model\b|\bdomain\s+model\b|\bdatabase\s+model\b|\bschema\s+model\b|\b3d\s+model\b|\bmodel\s+(?:number|year)\b)/i,
+    reason: 'A data, ORM, UI, schema, physical, or product model is not evidence of LLM cognition.'
+  },
+  {
+    rule: 'non-agentic-planning',
+    pattern: /\b(?:project|capacity|resource|sprint|roadmap|financial|production|event|calendar|route|trip|meal)\s+(?:plan|planner|planning)\b/i,
+    reason: 'Operational or domain planning is not agentic cognition by itself.'
+  },
+  {
+    rule: 'generic-planner-class',
+    pattern: /\b(?:Route|Trip|Meal|Capacity|Resource|Project|Event)Planner\b/,
+    reason: 'A domain-specific planner is not an agentic planner by itself.'
+  }
+]);
+
+const THINK_LLM_CALL_PATTERNS = Object.freeze([
+  /\bopenai\.(?:responses\.create|chat\.completions\.create)\s*\(/i,
+  /\banthropic\.messages\.create\s*\(/i,
+  /\b(?:client\.)?(?:responses|chat\.completions|messages)\.create\s*\(/i,
+  /\b(?:generateText|streamText|generateObject|invokeModel|generateContent)\s*\(/,
+  /\b(?:llm|model)\.(?:invoke|generate|generateContent|complete|chat|stream)\s*\(/i
+]);
+
+const THINK_PROVIDER_PATTERNS = Object.freeze([
+  /\bfrom\s+["'](?:openai|@anthropic-ai\/sdk|@google\/generative-ai|@google\/genai)["']/,
+  /\brequire\s*\(\s*["'](?:openai|@anthropic-ai\/sdk|@google\/generative-ai|@google\/genai)["']\s*\)/,
+  /\b(?:OpenAI|Anthropic|GoogleGenerativeAI)\s*\(/
+]);
+
+const THINK_MODEL_CONFIG_PATTERN = /\bmodel\s*[:=]\s*["'\x60][^"'\x60]*(?:gpt|o[1-9]|claude|gemini|llama|mistral|qwen|deepseek|glm|nemotron|command-r)[^"'\x60]*["'\x60]/i;
+const THINK_REASONING_CONFIG_PATTERN = /\b(?:reasoning(?:Effort)?|reasoning_effort|thinkingBudget|thinking_budget)\s*[:=]/i;
+const THINK_ORCHESTRATION_PATTERN = /\b(?:planner|planning|replan|reasoning|subagent|sub-agent|handoff|delegate|delegation)\b/i;
+const THINK_AGENTIC_SUPPORT_PATTERN = /\b(agent|assistant|orchestrator|workflow|task|prompt|model|llm|tool|context|memory|executor|runtime|messages?)\b/i;
+const THINK_MODEL_SUPPORT_PATTERN = /\b(agent|assistant|orchestrator|workflow|task|prompt|llm|tool|context|memory|executor|runtime|messages?)\b/i;
+const THINK_PATH_PATTERN = /(?:^|[\/_.-])(agents?|assistant|planner|planning|reasoning|orchestrator|runtime|workflow|model|llm|subagents?)(?:[\/_.-]|$)/i;
+
+function resolveThinkCognition({ path, line, lines, lineIndex, sourceKind }) {
+  const current = String(line ?? '');
+  const surrounding = windowText(lines ?? [current], lineIndex ?? 0);
+  const pathText = String(path ?? '');
+
+  for (const negative of THINK_NEGATIVE_PATTERNS) {
+    if (negative.pattern.test(current)) {
+      return rejected('think.cognition.v1', negative.rule, negative.reason);
+    }
+  }
+
+  if (THINK_LLM_CALL_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'think.cognition.v1',
+      'llm-model-invocation',
+      'The source contains an explicit LLM/model invocation surface.'
+    );
+  }
+
+  if (THINK_MODEL_CONFIG_PATTERN.test(current)) {
+    return accepted(
+      'think.cognition.v1',
+      'explicit-llm-model-config',
+      'The source binds a model setting to a recognized LLM model family.'
+    );
+  }
+
+  if (THINK_REASONING_CONFIG_PATTERN.test(current)) {
+    return accepted(
+      'think.cognition.v1',
+      'reasoning-configuration',
+      'The source contains an explicit model reasoning/thinking configuration.'
+    );
+  }
+
+  if (THINK_PROVIDER_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (sourceKind === 'implementation' || sourceKind === 'config') {
+      return accepted(
+        'think.cognition.v1',
+        'llm-provider-surface',
+        'The implementation/config source imports or instantiates a recognized LLM provider SDK.'
+      );
+    }
+  }
+
+  if (THINK_ORCHESTRATION_PATTERN.test(current)) {
+    if (THINK_AGENTIC_SUPPORT_PATTERN.test(surrounding) && (THINK_PATH_PATTERN.test(pathText) || sourceKind === 'implementation')) {
+      return accepted(
+        'think.cognition.v1',
+        'agentic-cognition-orchestration',
+        'Planning, reasoning, replan, subagent, or handoff semantics are coupled to an agentic runtime/workflow surface.'
+      );
+    }
+
+    return rejected(
+      'think.cognition.v1',
+      'unresolved-cognition-token',
+      'A generic planning, reasoning, or subagent token is insufficient to establish THINK.'
+    );
+  }
+
+  if (/\b(?:openai|anthropic|gemini|llm|model)\b/i.test(current)) {
+    if (THINK_MODEL_SUPPORT_PATTERN.test(surrounding) && THINK_PATH_PATTERN.test(pathText)) {
+      return accepted(
+        'think.cognition.v1',
+        'supported-model-reference',
+        'The model/provider reference is supported by an agentic model/runtime source neighborhood.'
+      );
+    }
+
+    return rejected(
+      'think.cognition.v1',
+      'unresolved-model-token',
+      'A generic model/provider token is insufficient without an LLM invocation, recognized model configuration, or agentic runtime support.'
+    );
+  }
+
+  return rejected(
+    'think.cognition.v1',
+    'unresolved-think-candidate',
+    'The THINK lexical candidate could not be resolved to an LLM/model cognition or agentic planning surface.'
+  );
+}
+
 export function resolveSemanticCandidate(candidate) {
   if (candidate?.detector?.id === 'who.agent-definition') return resolveWhoActor(candidate);
   if (candidate?.detector?.id === 'know.context-resource') return resolveKnowContext(candidate);
+  if (candidate?.detector?.id === 'think.model-cognition') return resolveThinkCognition(candidate);
 
   return {
     accepted: true,
