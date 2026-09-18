@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);
-const state={locale:localStorage.getItem("avgl.locale")||(navigator.language||"en").toLowerCase().startsWith("de")?"de":"en",scanStrategy:"full",accessMode:"public",repo:"",ir:null,inventory:null,activeFile:null,lens:"structure",chat:[],github:{connected:false,user:null,repositories:[]},workspace:{selected:[]}};
+const state={locale:localStorage.getItem("avgl.locale")||(navigator.language||"en").toLowerCase().startsWith("de")?"de":"en",scanStrategy:"full",accessMode:"public",scopeMode:"repository",repo:"",ir:null,inventory:null,activeFile:null,lens:"structure",chat:[],github:{connected:false,user:null,repositories:[]},workspace:{selected:[],result:null}};
 const TXT={
 en:{hero1:"See the system.",hero2:"Follow the effect.",hero:"Analyze a repository or workspace. AVGL builds an evidence-bound model of its structure, identities, relationships and effects.",repo:"GitHub repository",analyze:"Analyze",help:"Public repositories work directly. Private repositories require a verified GitHub App user session.",analysis:"Analysis",story:"Overview",files:"Structure",inspect:"Evidence",system:"Agentic",filesTitle:"Repository structure",filesIntro:"Browse the repository by hierarchy. Select a file for a grounded description of its role, content, and likely effect.",search:"Search files…",select:"Select a file",selectHint:"AVGL will explain what it contains, what role it plays, and which semantic areas it touches.",excerpt:"Source excerpt",ask:"Ask AVGL",assistant:"System assistant",noRepo:"Analyze a repository first. The assistant will answer against the current repo context.",placeholder:"Ask about architecture, a file, permissions, runtime…",send:"Send",loading:"Discovering, binding and synthesizing repository evidence…",done:"Analysis complete. Signals are bounded; unknowns stay explicit.",loadFiles:"Loading repository hierarchy…",filesFail:"Repository hierarchy could not be loaded.",fileLoad:"Loading file context…",fileFail:"File context could not be loaded.",role:"Role",areas:"Semantic areas",symbols:"Symbols / exports",lines:"Lines",size:"Size",source:"Source surfaces",notFound:"Not evidenced",partial:"Partial bounded scan",complete:"Complete bounded scan",systemNote:"Agentic/Governance projection over the current evidence model. This is not the universal AVGL system topology.",evidenceIntro:"Static signals grouped by semantic area. Documentation can support understanding, but cannot by itself prove MAY, ACT or DID.",thinking:"Reading relevant repository context…",chatFail:"The assistant could not answer this request.",keyMissing:"OpenRouter is not configured. Add OPENROUTER_API_KEY in Vercel.",suggest1:"What are the biggest architecture gaps?",suggest2:"Explain the authority model.",suggest3:"Which files matter most for runtime behavior?",canMay:"Technical reach is not permission.",actDid:"An effect path is not a verified result.",unknown:"Missing evidence is never filled with a guess.",scanModeLabel:"Coverage",scanFull:"Full",scanQuick:"Quick · 120",scanFullHint:"Reads every eligible text/code file in the complete Git tree.",scanQuickHint:"Fast weighted sample of up to 120 eligible files.",sampled:"files scanned",fullScan:"Full source scan",quickScan:"Quick sample",relationsTitle:"How is it connected?",effectsTitle:"What does it affect?",noRelations:"No source-backed relation resolved for this file.",noEffects:"No external effect candidate resolved for this file.",localMutation:"Local mutation",externalEffect:"External effect candidate",workspace:"Workspace",connectGitHub:"Connect GitHub",disconnectGitHub:"Disconnect",publicRepo:"Public URL",privateRepo:"Private GitHub",publicMode:"Public repository mode",privateMode:"Private repository mode",githubConnected:"GitHub connected",githubUnavailable:"GitHub App is not configured or no session is active.",workspaceTitle:"Cross-repository workspace",workspaceIntro:"Analyze up to eight repositories at immutable revisions and derive evidence-bound cross-repository relations.",addRepo:"Add repository",connectedRepos:"Connected GitHub repositories",selectedRepos:"Selected repositories",analyzeWorkspace:"Analyze workspace",workspaceEmpty:"Add at least one repository.",workspaceLimit:"A workspace can contain at most eight repositories.",workspaceLoading:"Resolving immutable revisions and analyzing repositories…",workspaceDone:"Workspace analysis complete.",privateChatBlocked:"Remote assistant is disabled for private repository context. Use LOCAL_PRIVATE for source-private inference.",inheritance:"Inheritance",propagation:"Propagation",effective:"Effective",lensOverview:"Agentic summary of the current evidence model.",lensStructure:"What exists and where? Follow the selected object through source-backed structure.",lensEvidence:"How do we know? Inspect bounded source evidence for current claims.",lensAgentic:"How is the agentic system composed? WHO→DID remains an Agentic/Governance projection.",lensInheritance:"What is inherited or extended? Enabled only for evidence-backed inheritance relations in the current IR.",lensPropagation:"What can this object affect? Follow outgoing source-backed relations and effect candidates.",lensEffective:"What is actually effective here? Enabled only when effective-state records exist in the IR."},
 de:{hero1:"Sieh das System.",hero2:"Folge der Wirkung.",hero:"Analysiere ein Repository oder einen Workspace. AVGL erzeugt ein evidenzgebundenes Modell aus Struktur, Identitäten, Relationen und Wirkungen.",repo:"GitHub-Repository",analyze:"Analysieren",help:"Öffentliche Repositories funktionieren direkt. Private Repositories benötigen eine verifizierte GitHub-App-User-Session.",analysis:"Analyse",story:"Überblick",files:"Struktur",inspect:"Evidence",system:"Agentic",filesTitle:"Repository-Struktur",filesIntro:"Navigiere hierarchisch durch das Repository. Wähle ein File für eine verständliche Beschreibung von Rolle, Inhalt und möglicher Wirkung.",search:"Files durchsuchen…",select:"File auswählen",selectHint:"AVGL erklärt Inhalt, Rolle und die berührten semantischen Bereiche.",excerpt:"Source-Auszug",ask:"AVGL fragen",assistant:"System-Assistant",noRepo:"Analysiere zuerst ein Repository. Danach antwortet der Assistant auf Basis des aktuellen Repo-Context.",placeholder:"Frage zu Architektur, einem File, Permissions, Runtime…",send:"Senden",loading:"Repository-Evidence wird entdeckt, gebunden und synthetisiert…",done:"Analyse abgeschlossen. Signale bleiben begrenzt; Unbekanntes bleibt explizit.",loadFiles:"Repository-Hierarchie wird geladen…",filesFail:"Repository-Hierarchie konnte nicht geladen werden.",fileLoad:"File-Context wird geladen…",fileFail:"File-Context konnte nicht geladen werden.",role:"Rolle",areas:"Semantische Bereiche",symbols:"Symbole / Exports",lines:"Zeilen",size:"Größe",source:"Source-Surfaces",notFound:"Nicht belegt",partial:"Partieller begrenzter Scan",complete:"Vollständiger begrenzter Scan",systemNote:"Agentic-/Governance-Projektion über dem aktuellen Evidence-Modell. Dies ist nicht die universelle AVGL-Systemtopologie.",evidenceIntro:"Statische Signale nach semantischem Bereich. Dokumentation kann Verständnis stützen, beweist allein aber weder MAY, ACT noch DID.",thinking:"Relevanter Repository-Context wird gelesen…",chatFail:"Der Assistant konnte diese Anfrage nicht beantworten.",keyMissing:"OpenRouter ist nicht konfiguriert. OPENROUTER_API_KEY muss in Vercel gesetzt werden.",suggest1:"Was sind die größten Architektur-Gaps?",suggest2:"Erkläre das Authority-Modell.",suggest3:"Welche Files sind für das Runtime-Verhalten am wichtigsten?",canMay:"Technische Reichweite ist keine Permission.",actDid:"Ein Effect-Pfad ist noch kein verifiziertes Ergebnis.",unknown:"Fehlende Evidence wird niemals durch eine Vermutung ersetzt.",scanModeLabel:"Abdeckung",scanFull:"Vollständig",scanQuick:"Schnell · 120",scanFullHint:"Liest jede geeignete Text-/Code-Datei im vollständigen Git-Tree.",scanQuickHint:"Schneller gewichteter Sample-Scan mit maximal 120 geeigneten Files.",sampled:"Files gescannt",fullScan:"Full Source Scan",quickScan:"Quick Sample",relationsTitle:"Wie ist es verbunden?",effectsTitle:"Was bewirkt es?",noRelations:"Für dieses File wurde keine Source-gebundene Relation aufgelöst.",noEffects:"Für dieses File wurde kein externer Effect-Kandidat aufgelöst.",localMutation:"Lokale Mutation",externalEffect:"Externer Effect-Kandidat",workspace:"Workspace",connectGitHub:"GitHub verbinden",disconnectGitHub:"Trennen",publicRepo:"Öffentliche URL",privateRepo:"Privates GitHub",publicMode:"Öffentlicher Repository-Modus",privateMode:"Privater Repository-Modus",githubConnected:"GitHub verbunden",githubUnavailable:"GitHub App ist nicht konfiguriert oder es besteht keine Session.",workspaceTitle:"Cross-Repository Workspace",workspaceIntro:"Analysiert bis zu acht Repositories an unveränderlichen Revisionen und leitet Evidence-gebundene Cross-Repo-Relationen ab.",addRepo:"Repository hinzufügen",connectedRepos:"Verbundene GitHub-Repositories",selectedRepos:"Ausgewählte Repositories",analyzeWorkspace:"Workspace analysieren",workspaceEmpty:"Füge mindestens ein Repository hinzu.",workspaceLimit:"Ein Workspace kann maximal acht Repositories enthalten.",workspaceLoading:"Unveränderliche Revisionen werden aufgelöst und Repositories analysiert…",workspaceDone:"Workspace-Analyse abgeschlossen.",privateChatBlocked:"Remote Assistant ist für Private-Repository-Context deaktiviert. Nutze LOCAL_PRIVATE für source-private Inference.",inheritance:"Vererbung",propagation:"Wirkung",effective:"Effektiv",lensOverview:"Agentische Zusammenfassung des aktuellen Evidence-Modells.",lensStructure:"Was existiert wo? Folge dem ausgewählten Objekt durch Source-gebundene Struktur.",lensEvidence:"Woher wissen wir das? Prüfe begrenzte Source-Evidence für aktuelle Aussagen.",lensAgentic:"Wie ist das agentische System aufgebaut? WHO→DID bleibt eine Agentic-/Governance-Projektion.",lensInheritance:"Was wird vererbt oder erweitert? Nur aktiv bei Evidence-gebundenen Inheritance-Relationen im aktuellen IR.",lensPropagation:"Was kann dieses Objekt beeinflussen? Folge ausgehenden Source-gebundenen Relationen und Effect-Kandidaten.",lensEffective:"Was gilt hier tatsächlich? Nur aktiv, wenn Effective-State-Records im IR vorhanden sind."}
@@ -69,7 +69,41 @@ function renderEffective(){
 }
 
 function renderMeta(){const a=state.ir.analysis||{},c=a.sourceCoverage||{},eligible=a.filesEligible??a.filesSeen;const h=$("#scan-meta"),mode=a.scanStrategy==="full"?t("fullScan"):t("quickScan");h.replaceChildren(chip(mode),chip((a.filesScanned||0)+"/"+eligible+" "+t("sampled")),chip("impl "+(c.implementation||0)+" · cfg "+(c.config||0)+" · test "+(c.test||0)+" · docs "+(c.documentation||0)),chip(a.scanComplete?t("complete"):t("partial")));const n=$("#partial-warning");n.hidden=!!a.scanComplete;if(!n.hidden){const failures=a.contentFetchFailures?.length||0;n.textContent=state.locale==="de"?`Scan unvollständig: ${a.filesScanned||0} von ${eligible} geeigneten Files gelesen${failures?`; ${failures} Fetch-Fehler`:""}. Nicht gelesene Evidence bleibt unbekannt.`:`Scan incomplete: ${a.filesScanned||0} of ${eligible} eligible files read${failures?`; ${failures} fetch failures`:""}. Unseen evidence remains unknown.`}}
-function renderAll(scroll=true){$("#result-title").textContent=state.ir?.source?.label||state.repo;renderMeta();renderStory();renderInspect();renderSystem();renderInheritance();renderPropagation();renderEffective();refreshLensCapabilities();document.body.classList.add("workspace-active");dockAssistant();$("#system-nav-scope").textContent=state.repo||"repository";$("#result").hidden=false;selectView(state.lens||"structure");if(scroll)$("#result").scrollIntoView({behavior:"smooth",block:"start"})}
+function renderAll(scroll=true){state.scopeMode="repository";$("#result-title").textContent=state.ir?.source?.label||state.repo;renderMeta();renderStory();renderInspect();renderSystem();renderInheritance();renderPropagation();renderEffective();refreshLensCapabilities();document.body.classList.add("workspace-active");dockAssistant();$("#result").hidden=false;activateScope("repository",false);selectView(state.lens||"structure");if(scroll)$("#result").scrollIntoView({behavior:"smooth",block:"start"})}
+function activateScope(mode,scroll=true){
+ state.scopeMode=mode==="workspace"?"workspace":"repository";
+ const workspace=state.scopeMode==="workspace";
+ document.body.classList.add("workspace-active");
+ $("#result").hidden=false;
+ $("#repository-scope-panel").hidden=workspace;
+ $("#workspace-scope-panel").hidden=!workspace;
+ $("#workspace-scope-view").hidden=!workspace;
+ $(".view-tabs").hidden=workspace;
+ $("#lens-description").hidden=workspace;
+ $("#scope-repository").classList.toggle("active",!workspace);
+ $("#scope-workspace").classList.toggle("active",workspace);
+ $("#file-empty").hidden=workspace||Boolean(state.activeFile);
+ $("#file-detail").hidden=workspace||!state.activeFile;
+ $("#workspace-context").hidden=!workspace;
+ if(workspace){
+   ["overview","structure","evidence","agentic","inheritance","propagation","effective"].forEach(x=>$("#"+x+"-view").hidden=true);
+   $("#result-title").textContent="AVGL Workspace";
+   $("#system-nav-title").textContent="Root spaces";
+   $("#system-nav-scope").textContent="workspace";
+   $("#context-selection").textContent="Workspace";
+   $("#navigation-trail").textContent="Navigation: workspace → root repositories";
+   $("#workspace-context-roots").textContent=state.workspace.selected.length+" repositor"+(state.workspace.selected.length===1?"y":"ies");
+ }else{
+   $("#system-nav-title").textContent="Structure";
+   $("#system-nav-scope").textContent=state.repo||"repository";
+   $("#workspace-context").hidden=true;
+   selectView(state.lens||"structure");
+ }
+ updateAssistantContext();
+ if(scroll)$("#result").scrollIntoView({behavior:"smooth",block:"start"})
+}
+$("#scope-repository").onclick=()=>activateScope("repository");
+$("#scope-workspace").onclick=()=>activateScope("workspace");
 function lensCapabilities(){
  const relations=state.ir?.relations||[],effects=state.ir?.effects||[],chains=state.ir?.effectChains||[],effective=state.ir?.effectiveStates||[];
  return {
@@ -84,6 +118,7 @@ function refreshLensCapabilities(){
  return caps
 }
 function selectView(v){
+ if(state.scopeMode==="workspace"){updateAssistantContext();return}
  const allowed=["overview","structure","evidence","agentic","inheritance","propagation","effective"],caps=lensCapabilities();
  if(["inheritance","propagation","effective"].includes(v)&&!caps[v])v="structure";
  state.lens=allowed.includes(v)?v:"structure";
@@ -155,6 +190,7 @@ $("#assistant-context-toggle").onclick=()=>{dockAssistant();setAssistantOpen($("
 $("#assistant-close").onclick=()=>setAssistantOpen(false);
 function updateAssistantContext(){
  const n=$("#assistant-context");
+ if(state.scopeMode==="workspace"){n.textContent=(state.locale==="de"?"Scope: Workspace · Cross-Repo-Assistant noch nicht aktiviert.":"Scope: Workspace · Cross-repository assistant is not enabled yet.");$("#assistant-send").disabled=true;return}
  if(!state.repo){n.textContent=t("noRepo");$("#assistant-send").disabled=true;return}
  const selection=state.activeFile||(state.locale==="de"?"keine Auswahl":"no selection");
  const prefix=(state.locale==="de"?"Scope: ":"Scope: ")+state.repo+" · Lens: "+(state.lens||"structure")+" · "+(state.locale==="de"?"Auswahl: ":"Selection: ")+selection;
@@ -212,7 +248,7 @@ function addWorkspaceRepo(repository,meta={}){
 }
 function removeWorkspaceRepo(repository){state.workspace.selected=state.workspace.selected.filter(r=>r.repository!==repository);renderWorkspaceSelected()}
 function renderWorkspaceSelected(){
- const host=$("#workspace-selected");if(!host)return;host.replaceChildren();
+ const host=$("#workspace-selected");if(!host)return;host.replaceChildren();const roots=$("#workspace-context-roots");if(roots)roots.textContent=state.workspace.selected.length+" repositor"+(state.workspace.selected.length===1?"y":"ies");
  if(!state.workspace.selected.length){host.append(el("p","relation-empty",t("workspaceEmpty")));return}
  state.workspace.selected.forEach(repo=>{const row=el("div","workspace-selected-row"),name=el("span","workspace-repo-name",repo.repository),remove=el("button","icon-button","×");remove.type="button";remove.onclick=()=>removeWorkspaceRepo(repo.repository);row.append(name,chip(repo.accessMode==="github_app"?"GITHUB APP":"PUBLIC"),remove);host.append(row)})
 }
@@ -220,8 +256,7 @@ function renderWorkspaceRepoOptions(){
  const host=$("#workspace-repo-options");if(!host)return;host.replaceChildren();
  state.github.repositories.forEach(repo=>{const b=el("button","workspace-repo-option",repo.fullName+(repo.private?" · private":""));b.type="button";b.onclick=()=>addWorkspaceRepo(repo.fullName,{...repo,githubApp:true});host.append(b)})
 }
-$("#workspace-toggle").onclick=()=>{$("#workspace-panel").hidden=!$("#workspace-panel").hidden;if(!$("#workspace-panel").hidden)$("#workspace-panel").scrollIntoView({behavior:"smooth",block:"start"})};
-$("#workspace-close").onclick=()=>$("#workspace-panel").hidden=true;
+$("#workspace-toggle").onclick=()=>activateScope("workspace");
 $("#workspace-add").onclick=()=>{addWorkspaceRepo($("#workspace-repo-input").value);$("#workspace-repo-input").value=""};
 $("#workspace-analyze").onclick=async()=>{
  $("#workspace-error").hidden=true;$("#workspace-result").hidden=true;
@@ -230,11 +265,17 @@ $("#workspace-analyze").onclick=async()=>{
  try{
   const r=await fetch("/api/workspace",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({label:"AVGL Workspace",repositories:state.workspace.selected.map(repo=>({repository:repo.repository,id:repo.id,revision:repo.revision,accessMode:repo.accessMode||"public"})),scanStrategy:state.scanStrategy})});
   const p=await r.json();if(!r.ok)throw Error(p.error||"Workspace analysis failed");
+  state.workspace.result=p;activateScope("workspace",false);
   const host=$("#workspace-result");host.replaceChildren();
-  host.append(el("h3","",t("workspaceDone")),el("p","workspace-summary",p.summary.repositories+" repositories · "+p.summary.explicitRelations+" explicit relations · "+p.summary.derivedRelations+" derived relations · "+p.summary.derivedEffectChains+" derived effect chains"));
+  host.append(el("h3","",t("workspaceDone")),el("p","workspace-summary",p.summary.repositories+" root repositories · "+p.summary.explicitRelations+" explicit relations · "+p.summary.derivedRelations+" derived relations · "+p.summary.derivedEffectChains+" derived effect chains"));
   const list=el("div","workspace-relations");
   (p.workspace?.relations||[]).slice(0,120).forEach(rel=>{const row=el("div","relation-row"),head=el("div","relation-row-head");head.append(el("span","relation-type",rel.type),chip(rel.basis));row.append(head,el("div","relation-target",(rel.from?.id||"?")+" → "+(rel.to?.id||"?")));list.append(row)});
-  host.append(list);host.hidden=false;$("#workspace-status").textContent=t("workspaceDone")
+  host.append(list);
+  $("#scan-meta").replaceChildren(chip(p.summary.repositories+" roots"),chip(p.summary.explicitRelations+" explicit"),chip(p.summary.derivedRelations+" derived"),chip(p.summary.derivedEffectChains+" effect chains"));
+  $("#workspace-context-roots").textContent=p.summary.repositories+" repositories";
+  $("#workspace-context-relations").textContent=(p.summary.explicitRelations+p.summary.derivedRelations)+" cross-repo relations";
+  $("#workspace-context-effects").textContent=p.summary.derivedEffectChains+" derived effect chains";
+  $("#workspace-status").textContent=t("workspaceDone")
  }catch(err){$("#workspace-error").textContent=err.message;$("#workspace-error").hidden=false;$("#workspace-status").textContent=""}
  finally{$("#workspace-analyze").disabled=false}
 };

@@ -60,35 +60,6 @@
       <div id="error" class="error" role="alert" hidden></div>
     </section>
 
-    <section id="workspace-panel" class="result workspace-panel" hidden aria-live="polite">
-      <div class="result-head">
-        <div>
-          <p class="eyebrow">AVGL Workspace</p>
-          <h2 data-i18n="workspaceTitle">Cross-repository workspace</h2>
-          <p class="workspace-copy" data-i18n="workspaceIntro">Analyze up to eight repositories at immutable revisions and derive evidence-bound cross-repository relations.</p>
-        </div>
-        <button id="workspace-close" class="icon-button" type="button" aria-label="Close">×</button>
-      </div>
-      <div class="workspace-add-row">
-        <input id="workspace-repo-input" type="text" placeholder="owner/repository">
-        <button id="workspace-add" class="lang-toggle" type="button" data-i18n="addRepo">Add repository</button>
-      </div>
-      <div id="workspace-connected" class="workspace-connected" hidden>
-        <p class="workspace-label" data-i18n="connectedRepos">Connected GitHub repositories</p>
-        <div id="workspace-repo-options" class="workspace-repo-options"></div>
-      </div>
-      <div>
-        <p class="workspace-label" data-i18n="selectedRepos">Selected repositories</p>
-        <div id="workspace-selected" class="workspace-selected"></div>
-      </div>
-      <div class="workspace-actions">
-        <span id="workspace-status" class="scan-mode-hint"></span>
-        <button id="workspace-analyze" class="primary-button" type="button" data-i18n="analyzeWorkspace">Analyze workspace</button>
-      </div>
-      <div id="workspace-error" class="error" hidden></div>
-      <div id="workspace-result" class="workspace-result" hidden></div>
-    </section>
-
     <section id="result" class="result system-workspace" hidden aria-live="polite">
       <div class="result-head">
         <div><p class="eyebrow" data-i18n="analysisEyebrow">Analysis</p><h2 id="result-title">Repository</h2></div>
@@ -106,12 +77,38 @@
             <span id="system-nav-scope" class="meta-chip">repository</span>
           </div>
           <div id="system-nav-body" class="system-nav-body">
-            <div class="system-nav-tools">
-              <input id="file-search" type="search" data-i18n-placeholder="searchFiles" placeholder="Search files…">
-              <span id="file-count" class="meta-chip"></span>
+            <div class="scope-switch" role="group" aria-label="System scope">
+              <button id="scope-repository" class="scope-button active" type="button">Repository</button>
+              <button id="scope-workspace" class="scope-button" type="button">Workspace</button>
             </div>
-            <div id="tree-warning" class="notice" hidden></div>
-            <div id="file-tree" class="file-tree" aria-label="Repository files"></div>
+            <div id="repository-scope-panel">
+              <div class="system-nav-tools">
+                <input id="file-search" type="search" data-i18n-placeholder="searchFiles" placeholder="Search files…">
+                <span id="file-count" class="meta-chip"></span>
+              </div>
+              <div id="tree-warning" class="notice" hidden></div>
+              <div id="file-tree" class="file-tree" aria-label="Repository files"></div>
+            </div>
+            <div id="workspace-scope-panel" hidden>
+              <p class="workspace-copy" data-i18n="workspaceIntro">Analyze up to eight repositories at immutable revisions and derive evidence-bound cross-repository relations.</p>
+              <div class="workspace-add-row">
+                <input id="workspace-repo-input" type="text" placeholder="owner/repository">
+                <button id="workspace-add" class="lang-toggle" type="button" data-i18n="addRepo">Add</button>
+              </div>
+              <div id="workspace-connected" class="workspace-connected" hidden>
+                <p class="workspace-label" data-i18n="connectedRepos">Connected GitHub repositories</p>
+                <div id="workspace-repo-options" class="workspace-repo-options"></div>
+              </div>
+              <div>
+                <p class="workspace-label" data-i18n="selectedRepos">Root repositories</p>
+                <div id="workspace-selected" class="workspace-selected"></div>
+              </div>
+              <div class="workspace-actions">
+                <span id="workspace-status" class="scan-mode-hint"></span>
+                <button id="workspace-analyze" class="primary-button" type="button" data-i18n="analyzeWorkspace">Analyze workspace</button>
+              </div>
+              <div id="workspace-error" class="error" hidden></div>
+            </div>
           </div>
         </aside>
 
@@ -126,6 +123,15 @@
         <button type="button" class="view-tab capability-lens" data-view="effective" data-requires="effective" aria-selected="false" data-i18n="effective" disabled>Effective</button>
       </nav>
       <p id="lens-description" class="lens-description">What exists and where? Follow the selected object through source-backed structure.</p>
+      <div id="workspace-scope-view" class="view-panel workspace-scope-view" hidden>
+        <div class="derived-lens-head">
+          <p class="eyebrow">Workspace scope</p>
+          <p class="derived-lens-copy">Repositories are root spaces of one cross-repository projection. Relations remain evidence-bound and revision-pinned.</p>
+        </div>
+        <div id="workspace-result" class="workspace-result">
+          <p class="relation-empty">Add root repositories in the System navigator, then analyze the workspace.</p>
+        </div>
+      </div>
 
       <div id="overview-view" class="view-panel" hidden></div>
 
@@ -204,6 +210,24 @@
               <summary data-i18n="sourceExcerpt">Source excerpt</summary>
               <pre id="file-excerpt"></pre>
             </details>
+          </div>
+          <div id="workspace-context" hidden>
+            <div class="context-section">
+              <span>Scope</span>
+              <div class="context-value">Cross-repository workspace</div>
+            </div>
+            <div class="context-section">
+              <span>Root spaces</span>
+              <div id="workspace-context-roots" class="context-value">0 repositories</div>
+            </div>
+            <div class="context-section">
+              <span>Relations</span>
+              <div id="workspace-context-relations" class="context-value">Not analyzed</div>
+            </div>
+            <div class="context-section">
+              <span>Effect chains</span>
+              <div id="workspace-context-effects" class="context-value">Not analyzed</div>
+            </div>
           </div>
         </aside>
       </div>

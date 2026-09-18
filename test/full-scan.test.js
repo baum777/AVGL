@@ -27,9 +27,9 @@ function fullTreeFetch(url) {
       { type: 'blob', path: 'policy.ts', size: 70, sha: 'policy-blob' }
     ] }));
   }
-  if (url.endsWith('/git/blobs/root-blob')) return Promise.resolve(jsonResponse({ encoding:'base64', content:Buffer.from('export const tool = browser;').toString('base64') }));
-  if (url.endsWith('/git/blobs/agent-blob')) return Promise.resolve(jsonResponse({ encoding:'base64', content:Buffer.from('const agent = { model: "llm", tools: [browser] }; executor.dispatch("task");').toString('base64') }));
-  if (url.endsWith('/git/blobs/policy-blob')) return Promise.resolve(jsonResponse({ encoding:'base64', content:Buffer.from('export const policy = { permission: "read", scope: "repo" }; verify("receipt");').toString('base64') }));
+  if (url === 'https://raw.githubusercontent.com/acme/full/main/root.js') return Promise.resolve(textResponse('export const tool = browser;'));
+  if (url === 'https://raw.githubusercontent.com/acme/full/main/src/agent.js') return Promise.resolve(textResponse('const agent = { model: "llm", tools: [browser] }; executor.dispatch("task");'));
+  if (url === 'https://raw.githubusercontent.com/acme/full/main/src/policy.ts') return Promise.resolve(textResponse('export const policy = { permission: "read", scope: "repo" }; verify("receipt");'));
   throw new Error(`Unexpected URL: ${url}`);
 }
 
@@ -76,7 +76,7 @@ test('bounded scanner keeps weighted slot limit and reports incomplete coverage'
 
 test('full scanner fails closed when an eligible file cannot be fetched', async () => {
   const failingFetch = async (url, options) => {
-    if (url.endsWith('/git/blobs/policy-blob')) return jsonResponse({ message:'not found' }, 404);
+    if (url === 'https://raw.githubusercontent.com/acme/full/main/src/policy.ts') return textResponse('not found', 404);
     return fullTreeFetch(url, options);
   };
   const discovery = await discoverGitHubRepository('acme/full', {
@@ -87,4 +87,31 @@ test('full scanner fails closed when an eligible file cannot be fetched', async 
   assert.equal(discovery.scanComplete, false);
   assert.deepEqual(discovery.contentFetchFailures, ['src/policy.ts']);
   assert.equal(discovery.analysisMode, 'github-static-full-incomplete');
+});
+
+
+test('authenticated scanner uses Git blob API for private-compatible content reads', async () => {
+  const seen = [];
+  const fetchImpl = async (url, options) => {
+    seen.push({ url, authorization: options?.headers?.Authorization });
+    if (url === 'https://api.github.com/repos/acme/full') return jsonResponse({ default_branch: 'main', private: true });
+    if (url === 'https://api.github.com/repos/acme/full/git/trees/main?recursive=1') {
+      return jsonResponse({ sha: 'root-tree', truncated: false, tree: [
+        { type: 'blob', path: 'root.js', size: 80, sha: 'root-blob' }
+      ] });
+    }
+    if (url === 'https://api.github.com/repos/acme/full/git/blobs/root-blob') {
+      return jsonResponse({ encoding:'base64', content:Buffer.from('export const tool = browser;').toString('base64') });
+    }
+    throw new Error('Unexpected URL: ' + url);
+  };
+  const discovery = await discoverGitHubRepository('acme/full', {
+    fetchImpl,
+    token:'user-scoped-token',
+    scanStrategy:'full'
+  });
+  assert.equal(discovery.filesScanned, 1);
+  assert.equal(discovery.scanComplete, true);
+  assert.ok(seen.some((entry) => entry.url.endsWith('/git/blobs/root-blob') && entry.authorization === 'Bearer user-scoped-token'));
+  assert.equal(seen.some((entry) => entry.url.includes('raw.githubusercontent.com')), false);
 });
