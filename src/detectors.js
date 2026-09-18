@@ -50,7 +50,8 @@ export const DETECTORS = Object.freeze([
     confidence: 0.82,
     evidenceState: 'INFERRED',
     patterns: [
-      /\b(policy|permission|approval|grant|authorize|authorise|revok(?:e|ed|ation)|delegation|scope)\b/i
+      /\b(policy|permission|permissions|approval|approved|grant|grants|authorize|authorise|authorized|authorised|revok(?:e|ed|ation)|delegation|scope|scopes)\b/i,
+      /\b(requirePermission|checkPermission|hasPermission|assertPermission|requireApproval|approvalGate|evaluatePolicy|enforcePolicy|requireScope|checkScope|validateScope|issueGrant|createGrant|validateGrant|revokeGrant|isRevoked)\b/i
     ]
   },
   {
