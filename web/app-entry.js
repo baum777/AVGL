@@ -1,18 +1,3 @@
-const EXTRA_EN = {
-  selectGrantedRepo: "Select a granted repository",
-  githubConnecting: "Connecting GitHub…",
-  noGrantedRepos: "No repositories were granted to AVGL.",
-  connectToLoadRepos: "Connect GitHub to load granted repositories.",
-  grantedReposHint: "Only repositories you granted to the Visual-Grammar GitHub App."
-};
-const EXTRA_DE = {
-  selectGrantedRepo: "Freigegebenes Repository wählen",
-  githubConnecting: "GitHub wird verbunden…",
-  noGrantedRepos: "AVGL wurden keine Repositories freigegeben.",
-  connectToLoadRepos: "GitHub verbinden, um freigegebene Repositories zu laden.",
-  grantedReposHint: "Nur Repositories, die du der Visual-Grammar GitHub App freigegeben hast."
-};
-
 const PATCH_FN = `
 function githubConnectUrl(){
   return "/api/github-app/install?returnTo="+encodeURIComponent(location.pathname+location.search);
@@ -52,7 +37,7 @@ function populateGrantedRepoDropdown(preferred){
   const analyze = document.querySelector("#analyze-private-button");
   if(analyze) analyze.disabled = !select.value;
 }
-function setSourceMode(mode){
+setSourceMode = function(mode){
   state.accessMode = mode === "github_app" ? "github_app" : "public";
   document.querySelectorAll("[data-source-mode]").forEach(b => b.classList.toggle("active", b.dataset.sourceMode === state.accessMode));
   const pub = document.querySelector("#public-repo-input");
@@ -67,7 +52,7 @@ function setSourceMode(mode){
   }
   renderGitHubState();
   updateAssistantContext();
-}
+};
 async function activatePrivateRepoCta(){
   setSourceMode("github_app");
   const status = document.querySelector("#github-user-status");
@@ -81,7 +66,7 @@ async function activatePrivateRepoCta(){
   select.focus();
   if(select.showPicker) try { select.showPicker(); } catch {}
 }
-function renderGitHubState(){
+renderGitHubState = function(){
   const status = document.querySelector("#github-user-status");
   const connect = document.querySelector("#github-connect");
   const select = document.querySelector("#private-repository");
@@ -102,7 +87,7 @@ function renderGitHubState(){
     const ws = document.querySelector("#workspace-connected");
     if(ws) ws.hidden = true;
   }
-}
+};
 `;
 
 function injectI18n(src){
@@ -159,5 +144,3 @@ const source = await fetch("/web/app.js", { cache: "no-store" }).then((r) => {
 });
 const blob = new Blob([patchSource(source)], { type: "text/javascript" });
 await import(URL.createObjectURL(blob));
-void EXTRA_EN;
-void EXTRA_DE;
