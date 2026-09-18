@@ -20,7 +20,7 @@ const MIME_BY_EXT = new Map([
   [".webmanifest", "application/manifest+json; charset=utf-8"]
 ]);
 
-export function parseEntries(buf) {
+export export function parseEntries(buf) {
   const min = Math.max(0, buf.length - 0xffff - 22);
   let eocd = -1;
   for (let i = buf.length - 22; i >= min; i--) {
@@ -50,7 +50,7 @@ export function parseEntries(buf) {
   return entries;
 }
 
-export function extractEntry(buf, entry) {
+export export function extractEntry(buf, entry) {
   const p = entry.localOffset;
   if (buf.readUInt32LE(p) !== LOC_SIG) throw new Error("Invalid local header");
   const nameLen = buf.readUInt16LE(p + 26);
