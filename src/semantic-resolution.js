@@ -969,7 +969,7 @@ const DID_GENERIC_PATTERN = /\b(?:evidence|receipt|audit|verify|verification|rec
 
 function resolveDidEvidence({ line, lines, lineIndex }) {
   const current = String(line ?? '');
-  const surrounding = windowText(lines ?? [current], lineIndex ?? 0);
+  const surrounding = windowText(lines ?? [current], lineIndex ?? 0, 4);
 
   for (const negative of DID_NEGATIVE_PATTERNS) {
     if (negative.pattern.test(current)) {
