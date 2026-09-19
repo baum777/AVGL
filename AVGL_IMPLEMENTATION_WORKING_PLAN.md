@@ -10,6 +10,8 @@
 
 **Revision 2026-09-19 (2):** Owner-adopted semantic-claims contract stabilization from a second dispositioned input of the same series; adds AVGL-0215 as a prerequisite for AVGL-0277/AVGL-0287 (see [docs/AVGL_SEMANTIC_IR_STABILIZATION_INPUT_2026-09-19.md](./docs/AVGL_SEMANTIC_IR_STABILIZATION_INPUT_2026-09-19.md)). No Source of Truth decision changed.
 
+**Revision 2026-09-19 (3):** Owner-adopted layered-structure refinements from a third dispositioned input of the series; adds AVGL-0216 and amends AVGL-0240, AVGL-0250, AVGL-0277, and the test strategy (see [docs/AVGL_STRUCTURE_OPTIMIZATION_INPUT_2026-09-19.md](./docs/AVGL_STRUCTURE_OPTIMIZATION_INPUT_2026-09-19.md)). No Source of Truth decision changed.
+
 ---
 
 ## 1. Objective
@@ -256,6 +258,16 @@ Observed baseline (main @ f8ce7bf): resolver provenance (resolver, rule, reason,
 
 Out of scope: the mobile-first layout test failure on main (separate defect, not semantic-resolution scope).
 
+### AVGL-0216 — Typed observation signals, claim triples, and provenance chain
+
+Owner-adopted 2026-09-19 from a third dispositioned external input ([docs/AVGL_STRUCTURE_OPTIMIZATION_INPUT_2026-09-19.md](./docs/AVGL_STRUCTURE_OPTIMIZATION_INPUT_2026-09-19.md)). Refines EXTRACT/CLASSIFY/BIND within the canonical pipeline — no parallel layer vocabulary and no second pipeline. A code signal is not truth; observations, claims, and projections stay distinct, reconstructible stages.
+
+- [ ] Observation records expose typed signals (e.g. function-call, exception, import, config-key) in addition to the lexical line candidate; lexical candidates remain the fallback.
+- [ ] Semantic claims carry subject/predicate/object framing, defined schema-first; claim triples must not duplicate or bypass typed relation records (P4).
+- [ ] Evidence/provenance records bind the immutable source revision (repository, ref, commit where available), per the workspace revision-binding invariant.
+- [ ] The resolution chain is reconstructible end to end: observation → semantic claim → IR node → projection, each step carrying resolver/rule provenance.
+- [ ] Positive, negative, and provenance tests for each new signal type; unknowns preserved; no signal type creates semantics without a resolver rule.
+
 ## Gate P1
 
 Schema review must prove:
@@ -473,7 +485,14 @@ propagates_to
 mutates
 produces
 verifies
+implements
+provides
+consumes
+guards
+authorizes
 ~~~
+
+- [ ] Registry entries for implements/provides/consumes/guards/authorizes (owner-adopted 2026-09-19, third dispositioned input) define semantics, directionality, and evidence requirements before any emission.
 
 ### AVGL-0241 — Deterministic extraction
 
@@ -542,7 +561,8 @@ Represent:
 - [ ] folder/subtree scope;
 - [ ] repository scope;
 - [ ] explicit target scope;
-- [ ] unresolved scope.
+- [ ] unresolved scope;
+- [ ] structural, semantic (taxonomy), and context (scope) inheritance distinguished explicitly and never merged into one edge type (owner-adopted 2026-09-19, third dispositioned input).
 
 ### AVGL-0251 — Inheritance adapter
 
@@ -739,6 +759,7 @@ The context projection is a deterministic projection over the existing IR. It in
 - [ ] Evidence refs exposed for every asserted role, relation, and parent.
 - [ ] Unknown roles/relations remain explicitly UNKNOWN; no adjacency- or filename-based framing.
 - [ ] Stable object refs retained per the AVGL-0270 lens contract.
+- [ ] Context envelope fields (who / where / why / depends_on / constrained_by / effects / evidence) render only from evidenced identities/relations; purpose ("why") stays UNKNOWN without evidence (owner-adopted 2026-09-19, third dispositioned input).
 
 ## Gate P7
 
@@ -1049,7 +1070,8 @@ Also require:
 - [ ] partial coverage;
 - [ ] conflicting precedence;
 - [ ] cross-lens identity consistency;
-- [ ] v0.1 Story compatibility.
+- [ ] v0.1 Story compatibility;
+- [ ] structured eval records for canonical fixtures (expected/actual/result/reason per resolution), so semantic resolution quality is measurable over time (owner-adopted 2026-09-19, third dispositioned input).
 
 ---
 
