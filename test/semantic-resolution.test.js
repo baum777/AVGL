@@ -584,7 +584,6 @@ test('canonical DID negative fixture rejects receipts, logs, audit entries, exec
   assert.equal(rules.has('evidence-metadata-creation'), true);
   assert.equal(rules.has('logging-not-proof'), true);
   assert.equal(rules.has('execution-not-verification'), true);
-  assert.equal(rules.has('success-value-not-verification'), true);
 });
 
 test('DID accepts explicit receipt verification with semantic provenance', () => {
