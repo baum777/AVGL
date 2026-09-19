@@ -1,5 +1,5 @@
 import { sourceKindForPath } from './discover.js';
-import { fetchCompleteGitHubTree, parseGitHubRepository } from './github-tree.js';
+import { expectGitHubJson, fetchCompleteGitHubTree, parseGitHubRepository } from './github-tree.js';
 
 const MAX_DETAIL_BYTES = 320 * 1024;
 const MAX_CHAT_FILE_BYTES = 96 * 1024;
@@ -61,7 +61,7 @@ export async function fetchRepositoryFile(input, filePath, options = {}) {
   const parsed = parseRepository(input);
   const token = options.token;
   const url = `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}/contents/${encodedPath(filePath)}?ref=${encodeURIComponent(inventory.repository.defaultBranch)}`;
-  const payload = await expectJson(fetchImpl, url, token);
+  const payload = await expectGitHubJson(fetchImpl, url, token);
   if (payload.type !== 'file' || typeof payload.content !== 'string') {
     throw Object.assign(new Error('GitHub did not return a file payload.'), { statusCode: 422 });
   }
