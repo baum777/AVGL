@@ -1,4 +1,4 @@
-export const SEMANTIC_RESOLVER_VERSION = '0.6';
+export const SEMANTIC_RESOLVER_VERSION = '0.7';
 
 const CANVAS_CONTEXT_PATTERNS = Object.freeze([
   /\.getContext\s*\(\s*['"`](?:2d|webgl2?|bitmaprenderer)['"`]\s*\)/i,
@@ -903,6 +903,165 @@ function resolveActEffect({ path, line, lines, lineIndex, sourceKind }) {
   );
 }
 
+
+const DID_NEGATIVE_PATTERNS = Object.freeze([
+  {
+    rule: 'evidence-metadata-creation',
+    pattern: /\b(?:createReceipt|saveReceipt)\s*\(|\breceipt\s*=\s*\{\s*\}/i,
+    reason: 'Creating evidence metadata is not verifying evidence.'
+  },
+  {
+    rule: 'logging-not-proof',
+    pattern: /\b(?:logger\.(?:info|log)|console\.log|audit\.log)\s*\(/i,
+    reason: 'Logging or creating an audit entry is not proof of a verified outcome.'
+  },
+  {
+    rule: 'execution-not-verification',
+    pattern: /\b(?:execute|dispatch|commit)\s*\(/i,
+    reason: 'An execution attempt or effect is not evidence that the intended outcome was verified.'
+  },
+  {
+    rule: 'success-value-not-verification',
+    pattern: /\b(?:result|status)\s*=\s*['"`]success['"`]/i,
+    reason: 'A success value without an explicit verification operation is not verified outcome evidence.'
+  }
+]);
+
+const DID_RECEIPT_PATTERNS = Object.freeze([
+  /\bverifyReceipt\s*\(/i,
+  /\breceipt\.verify\s*\(/i
+]);
+
+const DID_RECEIPT_STATUS_PATTERN = /\breceipt\.status\s*===?\s*['"`]completed['"`]/i;
+const DID_RECEIPT_VERIFY_NEIGHBOR = /\b(?:verifyReceipt\s*\(|receipt\.verify\s*\()/i;
+
+const DID_STATE_PATTERNS = Object.freeze([
+  /\bverifyDeployment\s*\(/i,
+  /\bassertDatabaseState\s*\(/i,
+  /\bcheckState\s*\(/i,
+  /\bcompareCommittedState\s*\(/i
+]);
+
+const DID_ARTIFACT_PATTERNS = Object.freeze([
+  /\bverifyArtifact\s*\(/i,
+  /\bcheckChecksum\s*\(/i,
+  /\bvalidateHash\s*\(/i,
+  /\bartifact\.verify\s*\(/i
+]);
+
+const DID_AUDIT_EVIDENCE_PATTERN = /\brecordEvidence\s*\(\s*\{/i;
+const DID_AUDIT_RESULT_PATTERN = /\b(?:result|outcome)\s*:/i;
+
+const DID_RECONCILIATION_PATTERNS = Object.freeze([
+  /\breconcile\s*\(/i,
+  /\bcompareState\s*\(/i,
+  /\bvalidateConsistency\s*\(/i
+]);
+
+const DID_EXTERNAL_CONFIRMATION_PATTERNS = Object.freeze([
+  /\bconfirmTransaction\s*\(/i,
+  /\bverifyWebhookSignature\s*\(/i,
+  /\bprovider\.confirm\s*\(/i,
+  /\bexternalAttestation\.verify\s*\(/i
+]);
+
+const DID_GENERIC_PATTERN = /\b(?:evidence|receipt|audit|verify|verification|reconcile|reconciliation|outcome|checksum|hash|confirm|confirmation|attestation)\b/i;
+
+function resolveDidEvidence({ line, lines, lineIndex }) {
+  const current = String(line ?? '');
+  const surrounding = windowText(lines ?? [current], lineIndex ?? 0, 4);
+
+  for (const negative of DID_NEGATIVE_PATTERNS) {
+    if (negative.pattern.test(current)) {
+      return rejected('did.evidence.v1', negative.rule, negative.reason);
+    }
+  }
+
+  if (DID_RECEIPT_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'did.evidence.v1',
+      'execution-receipt',
+      'Receipt evidence is explicitly verified rather than merely created or stored.'
+    );
+  }
+
+  if (DID_RECEIPT_STATUS_PATTERN.test(current)) {
+    if (DID_RECEIPT_VERIFY_NEIGHBOR.test(surrounding)) {
+      return accepted(
+        'did.evidence.v1',
+        'execution-receipt',
+        'A completed receipt status is coupled to an explicit receipt verification operation.'
+      );
+    }
+    return rejected(
+      'did.evidence.v1',
+      'unverified-receipt-status',
+      'A completed receipt status without an explicit verification operation is not verified outcome evidence.'
+    );
+  }
+
+  if (DID_STATE_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'did.evidence.v1',
+      'state-verification',
+      'The system compares or verifies observed state against expected state.'
+    );
+  }
+
+  if (DID_ARTIFACT_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'did.evidence.v1',
+      'artifact-verification',
+      'Artifact integrity is explicitly checked.'
+    );
+  }
+
+  if (DID_AUDIT_EVIDENCE_PATTERN.test(current)) {
+    if (DID_AUDIT_RESULT_PATTERN.test(surrounding)) {
+      return accepted(
+        'did.evidence.v1',
+        'audit-evidence',
+        'The evidence record contains explicit result or outcome evidence.'
+      );
+    }
+    return rejected(
+      'did.evidence.v1',
+      'audit-without-outcome',
+      'An evidence or audit record without result/outcome evidence is not proof.'
+    );
+  }
+
+  if (DID_RECONCILIATION_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'did.evidence.v1',
+      'reconciliation-proof',
+      'Observed state is reconciled against expected or prior state.'
+    );
+  }
+
+  if (DID_EXTERNAL_CONFIRMATION_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'did.evidence.v1',
+      'external-confirmation',
+      'Independent provider, webhook, transaction, or attestation confirmation is explicitly verified.'
+    );
+  }
+
+  if (DID_GENERIC_PATTERN.test(current)) {
+    return rejected(
+      'did.evidence.v1',
+      'unresolved-evidence-token',
+      'Generic evidence, receipt, audit, verification, reconciliation, outcome, hash, or confirmation vocabulary is insufficient to establish DID.'
+    );
+  }
+
+  return rejected(
+    'did.evidence.v1',
+    'unresolved-did-candidate',
+    'The DID lexical candidate could not be resolved to verified outcome evidence.'
+  );
+}
+
 export function resolveSemanticCandidate(candidate) {
   if (candidate?.detector?.id === 'who.agent-definition') return resolveWhoActor(candidate);
   if (candidate?.detector?.id === 'know.context-resource') return resolveKnowContext(candidate);
@@ -910,6 +1069,7 @@ export function resolveSemanticCandidate(candidate) {
   if (candidate?.detector?.id === 'can.tool-surface') return resolveCanCapability(candidate);
   if (candidate?.detector?.id === 'may.authority-control') return resolveMayAuthority(candidate);
   if (candidate?.detector?.id === 'act.effect-path') return resolveActEffect(candidate);
+  if (candidate?.detector?.id === 'did.evidence-verification') return resolveDidEvidence(candidate);
 
   return {
     accepted: true,
