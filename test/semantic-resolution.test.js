@@ -9,6 +9,7 @@ const canonicalThinkNegativeFixture = new URL('./fixtures/semantic-resolution/th
 const canonicalCanNegativeFixture = new URL('./fixtures/semantic-resolution/can-non-capability-negative.mjs', import.meta.url);
 const canonicalMayNegativeFixture = new URL('./fixtures/semantic-resolution/may-non-authority-negative.mjs', import.meta.url);
 const canonicalMayScopeRevocationNegativeFixture = new URL('./fixtures/semantic-resolution/may-scope-revocation-negative.mjs', import.meta.url);
+const canonicalActNegativeFixture = new URL('./fixtures/semantic-resolution/act-non-effect-negative.mjs', import.meta.url);
 
 test('canonical negative fixture rejects Canvas 2D context as agentic KNOW evidence', async () => {
   const content = await readFile(canonicalCanvasFixture, 'utf8');
@@ -442,16 +443,139 @@ test('generic authority vocabulary fails closed even in implementation code', ()
   assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-authority-token'));
 });
 
-test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
-  const content = 'execute(workOrder);';
+test('canonical ACT negative fixture rejects references and definition-only execution vocabulary', async () => {
+  const content = await readFile(canonicalActNegativeFixture, 'utf8');
   const discovery = discoverFiles([{
-    path: 'src/executor.mjs',
+    path: 'src/domain/effect-words.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'ACT'), false);
+  const rules = new Set(
+    discovery.semanticRejections
+      .filter((item) => item.candidateClass === 'ACT')
+      .map((item) => item.rule)
+  );
+  assert.equal(rules.has('generic-effect-reference'), true);
+  assert.equal(rules.has('effect-definition-only'), true);
+});
+
+test('ACT accepts filesystem writes and preserves semantic provenance without implying DID', () => {
+  const content = "await fs.writeFile(targetPath, body);";
+  const discovery = discoverFiles([{
+    path: 'src/effects/file-writer.mjs',
     content,
     size: Buffer.byteLength(content, 'utf8')
   }]);
 
   const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
   assert.ok(act);
-  assert.equal(act.semanticResolution.mode, 'LEXICAL_FALLBACK');
+  assert.equal(act.semanticResolution.mode, 'SEMANTIC');
+  assert.equal(act.semanticResolution.resolver, 'act.effect.v1');
+  assert.equal(act.semanticResolution.rule, 'filesystem-write-effect');
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'DID'), false);
+
+  const classified = classifyDiscoveries(discovery);
+  const claim = classified.classifications.find((item) => item.semanticClass === 'ACT');
+  assert.ok(claim);
+  assert.equal(claim.evidence[0].semanticResolution.resolver, 'act.effect.v1');
+});
+
+test('ACT accepts concrete message send effects', () => {
+  const content = 'await mail.send(message);';
+  const discovery = discoverFiles([{
+    path: 'src/messaging/send-mail.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
+  assert.ok(act);
+  assert.equal(act.semanticResolution.rule, 'message-send-effect');
+});
+
+test('ACT accepts repository push and commit effects', () => {
+  const content = 'await repo.push(remote);';
+  const discovery = discoverFiles([{
+    path: 'src/git/push.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
+  assert.ok(act);
+  assert.equal(act.semanticResolution.rule, 'repository-commit-effect');
+});
+
+test('ACT accepts deployment effects only with execution context', () => {
+  const content = 'await deploy(release);';
+  const discovery = discoverFiles([{
+    path: 'src/runtime/deployment/apply.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
+  assert.ok(act);
+  assert.equal(act.semanticResolution.rule, 'deployment-effect');
+});
+
+test('ACT accepts database mutation effects', () => {
+  const content = 'await db.update(record);';
+  const discovery = discoverFiles([{
+    path: 'src/effects/database/update.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
+  assert.ok(act);
+  assert.equal(act.semanticResolution.rule, 'mutation-effect');
+});
+
+test('ACT accepts runtime executor calls', () => {
+  const content = 'await executor.execute(workOrder);';
+  const discovery = discoverFiles([{
+    path: 'src/runtime/executor/commit.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
+  assert.ok(act);
+  assert.equal(act.semanticResolution.rule, 'execution-dispatch-path');
+});
+
+test('generic execute calls fail closed outside runtime/effect context', () => {
+  const content = 'execute(value);';
+  const discovery = discoverFiles([{
+    path: 'src/math/apply.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'ACT'), false);
+  assert.ok(discovery.semanticRejections.some((item) => item.rule === 'unresolved-execution-call'));
+});
+
+test('documentation and test callsites do not establish production ACT', () => {
+  const docs = 'Use send to dispatch the message.';
+  const testCode = 'await executor.execute(workOrder);';
+  const discovery = discoverFiles([
+    { path: 'docs/execution.md', content: docs, size: Buffer.byteLength(docs, 'utf8') },
+    { path: 'test/executor.test.mjs', content: testCode, size: Buffer.byteLength(testCode, 'utf8') }
+  ]);
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'ACT'), false);
+  const rules = new Set(discovery.semanticRejections.filter((item) => item.candidateClass === 'ACT').map((item) => item.rule));
+  assert.equal(rules.has('documentation-effect-mention'), true);
+  assert.equal(rules.has('test-only-effect-path'), true);
+});
+
+test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
+  const content = 'verify(outcome);';
+  const discovery = discoverFiles([{
+    path: 'src/verification.mjs',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const did = discovery.observations.find((item) => item.candidateClass === 'DID');
+  assert.ok(did);
+  assert.equal(did.semanticResolution.mode, 'LEXICAL_FALLBACK');
   assert.equal(discovery.semanticResolution.lexicalFallbackAccepted > 0, true);
 });
