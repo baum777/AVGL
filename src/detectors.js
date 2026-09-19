@@ -62,7 +62,12 @@ export const DETECTORS = Object.freeze([
     evidenceState: 'INFERRED',
     patterns: [
       /\b(executor|execute|dispatch|send|write|commit|deploy|mutate|mutation)\b/i,
-      /\b(?:git|github|repo|repository|client)\.push\s*\(/i
+      /\b(?:executor|runner|workflow|runtime|dispatcher)\.(?:execute|dispatch)\s*\(/i,
+      /\b(?:mail|email|message|transport|client|channel|webhook|producer)\.(?:send|publish)\s*\(/i,
+      /\b(?:sendMail|sendMessage)\s*\(/i,
+      /\b(?:fs(?:\.promises)?\.)?(?:writeFile|writeFileSync|appendFile|appendFileSync|rename|unlink|rm)\s*\(/i,
+      /\b(?:git|github|repo|repository|transaction|client)\.(?:commit|push)\s*\(/i,
+      /\b(?:db|database|collection|repository|store)\.(?:insert|update|delete|upsert|mutate|save)\s*\(/i
     ]
   },
   {
