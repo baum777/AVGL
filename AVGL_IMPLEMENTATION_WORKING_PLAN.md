@@ -6,6 +6,10 @@
 **Baseline:** AVGL v0.1 evidence-bound repository analyzer  
 **Out of scope:** first-class temporal model, full runtime-history ingestion, AVGL-authoritative code generation
 
+**Revision 2026-09-19:** Owner-adopted context-lens framing from dispositioned external input; adds AVGL-0277 and AVGL-0287 (see [docs/AVGL_CONTEXTUAL_UNDERSTANDING_INPUT_2026-09-19.md](./docs/AVGL_CONTEXTUAL_UNDERSTANDING_INPUT_2026-09-19.md)). No Source of Truth decision changed.
+
+**Revision 2026-09-19 (2):** Owner-adopted semantic-claims contract stabilization from a second dispositioned input of the same series; adds AVGL-0215 as a prerequisite for AVGL-0277/AVGL-0287 (see [docs/AVGL_SEMANTIC_IR_STABILIZATION_INPUT_2026-09-19.md](./docs/AVGL_SEMANTIC_IR_STABILIZATION_INPUT_2026-09-19.md)). No Source of Truth decision changed.
+
 ---
 
 ## 1. Objective
@@ -232,6 +236,25 @@ Define separate vocabularies:
 - [ ] evidence.
 
 WHO…DID must live under agentic/governance semantics rather than defining universal object type.
+
+### AVGL-0215 — Semantic claims contract stabilization
+
+Owner-adopted 2026-09-19 from a second dispositioned external input ([docs/AVGL_SEMANTIC_IR_STABILIZATION_INPUT_2026-09-19.md](./docs/AVGL_SEMANTIC_IR_STABILIZATION_INPUT_2026-09-19.md)). Prerequisite for AVGL-0277/AVGL-0287: the semantic claims layer must be a stable contract before context/role projections consume it. The semantic claims layer is the agentic-vocabulary claims contract feeding identities/evidence into the v0.2 IR — it is not the universal kernel and not a runtime/call/dependency graph.
+
+Observed baseline (main @ f8ce7bf): resolver provenance (resolver, rule, reason, mode) already partially emitted by src/semantic-resolution.js including a `legacy.lexical.v0` fallback; confidence is numeric; 5 of 8 negative canonical fixtures and the synthesize pipeline expectation are red on main.
+
+- [x] Every emitted semantic classification carries resolver provenance (resolver id incl. version, rule, mode SEMANTIC/LEXICAL_FALLBACK, reason), propagated consistently into the IR.
+- [x] Every claim carries evidence refs (source path, line span where available, bounded excerpt, category implementation/configuration/documentation/test).
+- [x] Confidence stays orthogonal to the canonical evidence states (EXPLICIT/INFERRED/OBSERVED/UNKNOWN, SoT §15); any confidence vocabulary is defined schema-first and must not duplicate or weaken evidence states.
+- [x] Unknown stays unknown: absent evidence never becomes a false or negative claim.
+- [x] Forbidden shortcuts asserted by negative tests: name matching, documentation inflation, permission inflation, receipt inflation.
+- [x] Declared-only relations: no calls/dependency topology without a relation resolver (P4 evidence gates apply).
+- [x] Class vocabulary changes require an explicit Source of Truth revision (§28); no parallel ADR process is introduced.
+- [x] Contract lands as schema/JSON fields, not TypeScript artifacts.
+- [x] Semantic-resolution subset of the currently red main suite is green: 5 red negative canonical fixtures, canonical negatives, documentation-alone, DID acceptance, synthesize pipeline expectation.
+- [x] UI/icon renderers only consume the contract; they never derive meaning from filename, icon, color, position, or keywords alone (strengthens AVGL-0287).
+
+Out of scope: the mobile-first layout test failure on main (separate defect, not semantic-resolution scope).
 
 ## Gate P1
 
@@ -703,6 +726,20 @@ Show:
 - [ ] precedence;
 - [ ] unresolved/conflict markers.
 
+### AVGL-0277 — Context lens
+
+Owner-adopted 2026-09-19 from dispositioned external input ([docs/AVGL_CONTEXTUAL_UNDERSTANDING_INPUT_2026-09-19.md](./docs/AVGL_CONTEXTUAL_UNDERSTANDING_INPUT_2026-09-19.md)). Materializes the SoT §5.2 Context lens family. For one selected object, the lens answers: **which role does this artifact play in the overall system?**
+
+The context projection is a deterministic projection over the existing IR. It introduces no new resolver pipeline stage, no new file family, and no semantics absent from the IR.
+
+- [ ] Role framing derived only from evidenced identities (vocabulary roles, including agentic WHO…DID where evidenced), shown as primary/related.
+- [ ] Evidenced typed relations grouped by direction (e.g. reads/consumes inbound, produces/affects outbound); existing relation grammar only.
+- [ ] Containing spaces shown as structural parents (containment only, never inheritance).
+- [ ] Component/domain framing only when derivable from evidenced identities/relations.
+- [ ] Evidence refs exposed for every asserted role, relation, and parent.
+- [ ] Unknown roles/relations remain explicitly UNKNOWN; no adjacency- or filename-based framing.
+- [ ] Stable object refs retained per the AVGL-0270 lens contract.
+
 ## Gate P7
 
 Switching lenses must retain the same underlying selected object and must not create semantic duplication.
@@ -793,6 +830,16 @@ One action answers:
 - [ ] Expand locally.
 - [ ] Preserve readable labels.
 - [ ] Reveal exact technical evidence on demand.
+
+### AVGL-0287 — Context role card and icon grammar
+
+Owner-adopted 2026-09-19 from dispositioned external input ([docs/AVGL_CONTEXTUAL_UNDERSTANDING_INPUT_2026-09-19.md](./docs/AVGL_CONTEXTUAL_UNDERSTANDING_INPUT_2026-09-19.md)).
+
+- [ ] Object card renders the AVGL-0277 context-lens framing: role, evidenced relations by direction, structural parents, evidence reference count.
+- [ ] Relations on the card are navigable per AVGL-0282; evidence stays one step away per AVGL-0286.
+- [ ] Icon/glyph families (actor, structure, cognition, capability, authority, effective, evidence) are renderer-level visual syntax only.
+- [ ] Icon choice never encodes semantics absent from the IR (SoT §20/§21).
+- [ ] Card remains usable in narrow/mobile layouts (AVGL-0280 boundary applies).
 
 ## Gate P8
 

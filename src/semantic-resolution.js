@@ -244,7 +244,7 @@ const THINK_PROVIDER_PATTERNS = Object.freeze([
 ]);
 
 const THINK_MODEL_CONFIG_PATTERN = /\bmodel\s*[:=]\s*["'\x60][^"'\x60]*(?:gpt|o[1-9]|claude|gemini|llama|mistral|qwen|deepseek|glm|nemotron|command-r)[^"'\x60]*["'\x60]/i;
-const THINK_REASONING_CONFIG_PATTERN = /\b(?:reasoning(?:Effort)?|reasoning_effort|thinkingBudget|thinking_budget)\s*[:=]/i;
+const THINK_REASONING_CONFIG_PATTERN = /\b(?:reasoningEffort|reasoning_effort|thinkingBudget|thinking_budget)\s*[:=]/i;
 const THINK_ORCHESTRATION_PATTERN = /\b(?:planner|planning|replan|reasoning|subagent|sub-agent|handoff|delegate|delegation)\b/i;
 const THINK_AGENTIC_SUPPORT_PATTERN = /\b(agent|assistant|orchestrator|workflow|task|prompt|model|llm|tool|context|memory|executor|runtime|messages?)\b/i;
 const THINK_MODEL_SUPPORT_PATTERN = /\b(agent|assistant|orchestrator|workflow|task|prompt|llm|tool|context|memory|executor|runtime|messages?)\b/i;
@@ -557,7 +557,7 @@ const MAY_NEGATIVE_PATTERNS = Object.freeze([
   },
   {
     rule: 'certificate-revocation',
-    pattern: /\b(?:certificate|cert|crl|ocsp)\s+revok(?:e|ed|ation)\b/i,
+    pattern: /\b(?:certificate|cert|crl|ocsp)\s+revoc(?:e|ed|ation)\b/i,
     reason: 'Certificate revocation is not an AVGL authority revocation surface by itself.'
   }
 ]);
@@ -602,7 +602,7 @@ const MAY_REVOCATION_PATTERNS = Object.freeze([
 
 const MAY_AUTHORITY_PATH_PATTERN = /(?:^|[\/_.-])(policy|policies|auth|authorization|authority|permissions?|approvals?|grants?|scopes?|governance|security)(?:[\/_.-]|$)/i;
 const MAY_AUTHORITY_SUPPORT_PATTERN = /\b(agent|assistant|tool|workflow|runtime|action|capabilit(?:y|ies)|execute|effect|request|subject|principal|resource|operation)\b/i;
-const MAY_GENERIC_PATTERN = /\b(?:policy|permission|permissions|approval|approved|grant|grants|authorize|authorise|authorized|authorised|revok(?:e|ed|ation)|delegation|scope|scopes)\b/i;
+const MAY_GENERIC_PATTERN = /\b(?:policy|permission|permissions|approval|approved|grant|grants|authorize|authorise|authorized|authorised|revok(?:e|ed|ing)|revocation|delegation|scope|scopes)\b/i;
 
 function resolveMayAuthority({ path, line, lines, lineIndex, sourceKind }) {
   const current = String(line ?? '');
@@ -950,7 +950,7 @@ const DID_ARTIFACT_PATTERNS = Object.freeze([
 ]);
 
 const DID_AUDIT_EVIDENCE_PATTERN = /\brecordEvidence\s*\(\s*\{/i;
-const DID_AUDIT_RESULT_PATTERN = /\b(?:result|outcome)\s*:/i;
+const DID_AUDIT_RESULT_PATTERN = /\b(?:result|outcome)\s*(?::|,)/i;
 
 const DID_RECONCILIATION_PATTERNS = Object.freeze([
   /\breconcile\s*\(/i,

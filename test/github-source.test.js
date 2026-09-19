@@ -20,7 +20,7 @@ function mockFetch(url) {
   }
   if (url.endsWith('/docs/architecture.md')) return Promise.resolve(textResponse('policy approval grant. executor dispatch. receipt verification.'));
   if (url.endsWith('/agent.js')) return Promise.resolve(textResponse('const agent = { model: "llm", tools: ["browser"] };\nexecutor.dispatch("task");\n'));
-  if (url.endsWith('/policy.ts')) return Promise.resolve(textResponse('export const policy = { permission: "read", scope: "repo" };\nverify("receipt");\n'));
+  if (url.endsWith('/policy.ts')) return Promise.resolve(textResponse('export function authorizeAction(subject, action) {\n  if (!permissions.has(action)) throw new Error("denied");\n  return { subject, action };\n}\nverifyReceipt(receipt);\n'));
   throw new Error(`Unexpected URL: ${url}`);
 }
 

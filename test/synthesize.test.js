@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { analyzeGitHubRepository, analyzeRepository, projectStory } from '../src/index.js';
 
-const PIPELINE = ['DISCOVER', 'EXTRACT', 'CLASSIFY', 'BIND', 'RESOLVE_RELATIONS', 'TRACE_EFFECTS', 'SYNTHESIZE', 'PROJECT'];
+const PIPELINE = ['DISCOVER', 'EXTRACT', 'RESOLVE_SEMANTICS', 'CLASSIFY', 'BIND', 'RESOLVE_RELATIONS', 'TRACE_EFFECTS', 'SYNTHESIZE', 'PROJECT'];
 
 async function fixture(files) {
   const root = await mkdtemp(join(tmpdir(), 'avgl-synth-'));
@@ -24,8 +24,8 @@ test('synthesizes repository-specific capability, authority, effect, and evidenc
       const context = memory.retrieve('repo');
       const tools = [mcp, filesystem, browser];
       if (!policy.authorize('repo.write')) return approval.required;
-      await executor.dispatch(fetch('https://api.example.test'));
-      audit.verify(receipt);
+      await executor.dispatch(workOrder);
+      verifyReceipt(receipt);
     `,
     'test/agent.test.ts': `test('verifies outcome', () => assert(result));`
   });

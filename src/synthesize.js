@@ -38,7 +38,7 @@ const FAMILY_RULES = Object.freeze({
     ['approval-hitl', 'approval / human control', /\b(approval|approve|human.?in.?the.?loop|hitl)\b/i],
     ['permission-scope', 'permissions / scope', /\b(permission|scope|allow|deny)\b/i],
     ['grants-delegation', 'grants / delegation', /\b(grant|delegat(?:e|ion))\b/i],
-    ['revocation-expiry', 'revocation / expiry', /\b(revok(?:e|ed|ation)|expir(?:e|y)|ttl)\b/i]
+    ['revocation-expiry', 'revocation / expiry', /\b(revoc(?:e|ed|ation)|expir(?:e|y)|ttl)\b/i]
   ],
   ACT: [
     ['executor-dispatch', 'executor / dispatch', /\b(executor|execute|dispatch)\b/i],
@@ -50,7 +50,7 @@ const FAMILY_RULES = Object.freeze({
     ['command-execution', 'command execution', /\b(exec\(|spawn\(|subprocess|shell|command)\b/i]
   ],
   DID: [
-    ['verification', 'verification', /\b(verify|verification|validated?|assert)\b/i],
+    ['verification', 'verification', /\b(verify|verification|validated?|assert|verifyReceipt|verifyDeployment|verifyArtifact)\b/i],
     ['receipts', 'receipts', /\breceipt\b/i],
     ['audit-logging', 'audit / logging', /\b(audit|log(?:ging)?|event log)\b/i],
     ['tests', 'tests', /\b(test|spec|assert|pytest|vitest|jest)\b/i],

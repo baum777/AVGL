@@ -50,7 +50,7 @@ export const DETECTORS = Object.freeze([
     confidence: 0.82,
     evidenceState: 'INFERRED',
     patterns: [
-      /\b(policy|permission|permissions|approval|approved|grant|grants|authorize|authorise|authorized|authorised|revok(?:e|ed|ation)|delegation|scope|scopes)\b/i,
+      /\b(policy|permission|permissions|approval|approved|grant|grants|authorize|authorise|authorized|authorised|revok(?:e|ed|ing)|revocation|delegation|scope|scopes)\b/i,
       /\b(requirePermission|checkPermission|hasPermission|assertPermission|requireApproval|approvalGate|evaluatePolicy|enforcePolicy|requireScope|checkScope|validateScope|issueGrant|createGrant|validateGrant|revokeGrant|isRevoked)\b/i
     ]
   },
@@ -77,7 +77,8 @@ export const DETECTORS = Object.freeze([
     confidence: 0.82,
     evidenceState: 'INFERRED',
     patterns: [
-      /\b(evidence|receipt|audit|verify|verification|reconcile|reconciliation|outcome|checksum|hash|confirm|confirmation|attestation)\b/i
+      /\b(evidence|receipt|audit|verify|verification|reconcile|reconciliation|outcome|checksum|hash|confirm|confirmation|attestation)\b/i,
+      /\b(?:verifyReceipt|verifyDeployment|verifyArtifact|validateHash|checkChecksum|assertDatabaseState|checkState|compareCommittedState|compareState|recordEvidence|confirmTransaction|verifyWebhookSignature|validateConsistency)\s*\(/i
     ]
   }
 ]);

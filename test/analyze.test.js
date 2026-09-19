@@ -22,8 +22,8 @@ test('maps implementation evidence onto the seven AVGL semantic classes', async 
       const model = openai.model('reasoning');
       const tools = [runTests];
       if (!policy.authorize('test.run')) throw new Error('denied');
-      await executor.dispatch(runTests);
-      audit.verify(receipt);
+      await executor.dispatch(workOrder);
+      verifyReceipt(receipt);
     ` });
   t.after(() => rm(root, { recursive: true, force: true }));
   const ir = await analyzeRepository(root);
@@ -54,11 +54,11 @@ test('documentation alone cannot prove MAY, ACT, or DID', async (t) => {
   ` });
   t.after(() => rm(root, { recursive: true, force: true }));
   const ir = await analyzeRepository(root);
-  assert.equal(ir.nodes.some((node) => node.semanticClass === 'CAN'), true);
+  assert.equal(ir.nodes.some((node) => node.semanticClass === 'CAN'), false);
   assert.equal(ir.unknowns.includes('MAY'), true);
   assert.equal(ir.unknowns.includes('ACT'), true);
   assert.equal(ir.unknowns.includes('DID'), true);
-  assert.ok(ir.analysis.rejectedWeakEvidence >= 3);
+  assert.ok(ir.analysis.rejectedSemanticCandidates >= 3);
 });
 
 test('does not read common secret file surfaces', async (t) => {
