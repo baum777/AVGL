@@ -10,6 +10,7 @@ const canonicalCanNegativeFixture = new URL('./fixtures/semantic-resolution/can-
 const canonicalMayNegativeFixture = new URL('./fixtures/semantic-resolution/may-non-authority-negative.mjs', import.meta.url);
 const canonicalMayScopeRevocationNegativeFixture = new URL('./fixtures/semantic-resolution/may-scope-revocation-negative.mjs', import.meta.url);
 const canonicalActNegativeFixture = new URL('./fixtures/semantic-resolution/act-non-effect-negative.mjs', import.meta.url);
+const canonicalDidNegativeFixture = new URL('./fixtures/semantic-resolution/did-non-verification-negative.mjs', import.meta.url);
 
 test('canonical negative fixture rejects Canvas 2D context as agentic KNOW evidence', async () => {
   const content = await readFile(canonicalCanvasFixture, 'utf8');
@@ -566,16 +567,86 @@ test('documentation and test callsites do not establish production ACT', () => {
   assert.equal(rules.has('test-only-effect-path'), true);
 });
 
-test('unmigrated semantic classes remain explicitly marked as lexical fallback', () => {
-  const content = 'verify(outcome);';
+test('canonical DID negative fixture rejects receipts, logs, audit entries, execution, commits, and success values without verification', async () => {
+  const content = await readFile(canonicalDidNegativeFixture, 'utf8');
   const discovery = discoverFiles([{
-    path: 'src/verification.mjs',
+    path: 'src/runtime/evidence.mjs',
     content,
     size: Buffer.byteLength(content, 'utf8')
   }]);
 
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'DID'), false);
+  const rules = new Set(
+    discovery.semanticRejections
+      .filter((item) => item.candidateClass === 'DID')
+      .map((item) => item.rule)
+  );
+  assert.equal(rules.has('evidence-metadata-creation'), true);
+  assert.equal(rules.has('logging-not-proof'), true);
+  assert.equal(rules.has('execution-not-verification'), true);
+  assert.equal(rules.has('success-value-not-verification'), true);
+});
+
+test('DID accepts explicit receipt verification with semantic provenance', () => {
+  const content = 'verifyReceipt(receipt);';
+  const discovery = discoverFiles([{ path: 'src/evidence/receipt.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
   const did = discovery.observations.find((item) => item.candidateClass === 'DID');
   assert.ok(did);
-  assert.equal(did.semanticResolution.mode, 'LEXICAL_FALLBACK');
-  assert.equal(discovery.semanticResolution.lexicalFallbackAccepted > 0, true);
+  assert.equal(did.semanticResolution.mode, 'SEMANTIC');
+  assert.equal(did.semanticResolution.resolver, 'did.evidence.v1');
+  assert.equal(did.semanticResolution.rule, 'execution-receipt');
+});
+
+test('DID accepts artifact verification', () => {
+  const content = 'checkChecksum(hash);';
+  const discovery = discoverFiles([{ path: 'src/evidence/artifact.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
+  const did = discovery.observations.find((item) => item.candidateClass === 'DID');
+  assert.ok(did);
+  assert.equal(did.semanticResolution.rule, 'artifact-verification');
+});
+
+test('DID accepts state verification', () => {
+  const content = 'verifyDeployment(id);';
+  const discovery = discoverFiles([{ path: 'src/evidence/state.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
+  const did = discovery.observations.find((item) => item.candidateClass === 'DID');
+  assert.ok(did);
+  assert.equal(did.semanticResolution.rule, 'state-verification');
+});
+
+test('DID accepts reconciliation proof', () => {
+  const content = 'reconcile(expected, actual);';
+  const discovery = discoverFiles([{ path: 'src/evidence/reconcile.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
+  const did = discovery.observations.find((item) => item.candidateClass === 'DID');
+  assert.ok(did);
+  assert.equal(did.semanticResolution.rule, 'reconciliation-proof');
+});
+
+test('DID accepts external confirmation', () => {
+  const content = 'provider.confirm(transactionId);';
+  const discovery = discoverFiles([{ path: 'src/evidence/provider.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
+  const did = discovery.observations.find((item) => item.candidateClass === 'DID');
+  assert.ok(did);
+  assert.equal(did.semanticResolution.rule, 'external-confirmation');
+});
+
+test('DID accepts audit evidence only when result or outcome evidence exists', () => {
+  const content = [
+    'recordEvidence({',
+    '  actor,',
+    '  event,',
+    '  result,',
+    '  timestamp',
+    '});'
+  ].join('\n');
+  const discovery = discoverFiles([{ path: 'src/evidence/audit.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
+  const did = discovery.observations.find((item) => item.candidateClass === 'DID');
+  assert.ok(did);
+  assert.equal(did.semanticResolution.rule, 'audit-evidence');
+});
+
+test('ACT remains distinct from DID', () => {
+  const content = 'await executor.execute(workOrder);';
+  const discovery = discoverFiles([{ path: 'src/runtime/executor/run.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
+  assert.ok(discovery.observations.find((item) => item.candidateClass === 'ACT'));
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'DID'), false);
 });
