@@ -77,7 +77,7 @@ export const DETECTORS = Object.freeze([
     confidence: 0.82,
     evidenceState: 'INFERRED',
     patterns: [
-      /\b(evidence|receipt|audit|verify|verification|reconcile|reconciliation|outcome)\b/i
+      /\b(evidence|receipt|audit|verify|verification|reconcile|reconciliation|outcome|checksum|hash|confirm|confirmation|attestation)\b/i
     ]
   }
 ]);
