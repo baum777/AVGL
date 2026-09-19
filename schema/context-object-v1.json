@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AVGL Context Object v1",
+  "type": "object",
+  "required": ["id", "identity", "evidence", "relations", "effect"],
+  "properties": {
+    "id": {"type":"string"},
+    "identity": {
+      "type":"object",
+      "properties": {
+        "type":{"type":"string"},
+        "role":{"type":"string"}
+      }
+    },
+    "position": {"type":"array","items":{"type":"string"}},
+    "relations": {
+      "type":"array",
+      "items":{"$ref":"#/$defs/relationEdge"}
+    },
+    "effect": {"$ref":"#/$defs/effectDescriptor"},
+    "evidence": {
+      "type":"array",
+      "items":{"$ref":"#/$defs/evidenceBinding"}
+    }
+  },
+  "$defs": {
+    "relationEdge": {
+      "type":"object",
+      "required":["type","target"],
+      "properties": {
+        "type":{"type":"string"},
+        "target":{"type":"string"}
+      }
+    },
+    "effectDescriptor": {
+      "type":"object",
+      "properties": {
+        "type":{"type":"string"},
+        "scope":{"type":"string"}
+      }
+    },
+    "evidenceBinding": {
+      "type":"object",
+      "required":["source","confidence"],
+      "properties": {
+        "source":{"type":"string"},
+        "confidence":{"enum":["EXPLICIT","INFERRED","OBSERVED","UNKNOWN"]}
+      }
+    }
+  }
+}
