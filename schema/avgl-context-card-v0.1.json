@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AVGL Context Card v0.1",
+  "type": "object",
+  "required": ["id", "artifact", "context", "evidence"],
+  "properties": {
+    "id": {"type": "string"},
+    "artifact": {
+      "type": "object",
+      "required": ["path", "type"],
+      "properties": {
+        "path": {"type": "string"},
+        "type": {"type": "string"},
+        "role": {"type": "string"}
+      }
+    },
+    "avgl": {
+      "type": "object",
+      "properties": {
+        "layer": {"type": "string"}
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": ["summary", "purpose"],
+      "properties": {
+        "summary": {"type": "string"},
+        "purpose": {"type": "string"},
+        "effect": {"type": "string"}
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "authority": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": {"enum": ["EXPLICIT", "INFERRED", "OBSERVED", "UNKNOWN"]},
+        "confidence": {"type": "number"}
+      }
+    }
+  }
+}
