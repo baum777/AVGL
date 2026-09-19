@@ -1,4 +1,4 @@
-export const SEMANTIC_RESOLVER_VERSION = '0.5';
+export const SEMANTIC_RESOLVER_VERSION = '0.6';
 
 const CANVAS_CONTEXT_PATTERNS = Object.freeze([
   /\.getContext\s*\(\s*['"`](?:2d|webgl2?|bitmaprenderer)['"`]\s*\)/i,
@@ -726,12 +726,190 @@ function resolveMayAuthority({ path, line, lines, lineIndex, sourceKind }) {
   );
 }
 
+
+const ACT_NEGATIVE_PATTERNS = Object.freeze([
+  {
+    rule: 'effect-definition-only',
+    pattern: /\b(?:function|class)\s+\w*(?:execute|dispatch|send|write|commit|deploy|mutate|executor)\w*\b/i,
+    reason: 'A function/class definition names an execution surface but does not establish an effect-bearing call path.'
+  },
+  {
+    rule: 'write-authority-phrase',
+    pattern: /\bwrite\s+(?:permission|permissions|access|scope|grant|approval)\b/i,
+    reason: 'Write authority vocabulary belongs to MAY/CAN semantics and does not establish ACT.'
+  },
+  {
+    rule: 'commit-metadata',
+    pattern: /\bcommit\s+(?:message|hash|sha|id|metadata|history)\b/i,
+    reason: 'Commit metadata describes repository state and is not a repository mutation call.'
+  },
+  {
+    rule: 'generic-effect-reference',
+    pattern: /\b(?:executor|execute|dispatch|send|write|commit|deploy|mutate|mutation)\s*[:=]\s*[A-Za-z_$][\w$.]*/i,
+    reason: 'Assigning or referencing an effect-like symbol does not establish an execution path.'
+  }
+]);
+
+const ACT_EXECUTION_PATTERNS = Object.freeze([
+  /\b(?:executor|runner|workflow|runtime|dispatcher)\.(?:execute|dispatch)\s*\(/i,
+  /\b(?:execute|dispatch)\s*\(/
+]);
+
+const ACT_SEND_PATTERNS = Object.freeze([
+  /\b(?:mail|email|message|transport|client|channel|webhook|producer)\.(?:send|publish)\s*\(/i,
+  /\b(?:sendMail|sendMessage)\s*\(/i
+]);
+
+const ACT_FILE_WRITE_PATTERNS = Object.freeze([
+  /\bfs(?:\.promises)?\.(?:writeFile|writeFileSync|appendFile|appendFileSync|rename|unlink|rm)\s*\(/i,
+  /\b(?:writeFile|writeFileSync|appendFile|appendFileSync)\s*\(/i
+]);
+
+const ACT_REPOSITORY_PATTERNS = Object.freeze([
+  /\b(?:git|github|repo|repository|client)\.(?:commit|push)\s*\(/i,
+  /\btransaction\.commit\s*\(/i
+]);
+
+const ACT_DEPLOY_PATTERNS = Object.freeze([
+  /\b(?:deploy|deployRelease|createDeployment)\s*\(/i,
+  /\b(?:client|vercel|deployment|deployer)\.deploy\s*\(/i
+]);
+
+const ACT_MUTATION_PATTERNS = Object.freeze([
+  /\b(?:db|database|collection|repository|store)\.(?:insert|update|delete|upsert|mutate|save)\s*\(/i,
+  /\b(?:mutate|applyMutation)\s*\(/i
+]);
+
+const ACT_PATH_PATTERN = /(?:^|[\/_.-])(runtime|executors?|effects?|actions?|tools?|adapters?|connectors?|deploy|deployment|git|github|repos?|storage|filesystem|database|db|mail|email|messaging|dispatch)(?:[\/_.-]|$)/i;
+const ACT_SUPPORT_PATTERN = /\b(agent|assistant|workflow|runtime|workOrder|work_order|tool|effect|action|client|repository|database|message|file|path|remote|release|deployment|transaction|payload|request)\b/i;
+const ACT_GENERIC_PATTERN = /\b(?:executor|execute|dispatch|send|write|commit|deploy|mutate|mutation)\b/i;
+
+function resolveActEffect({ path, line, lines, lineIndex, sourceKind }) {
+  const current = String(line ?? '');
+  const surrounding = windowText(lines ?? [current], lineIndex ?? 0);
+  const pathText = String(path ?? '');
+
+  for (const negative of ACT_NEGATIVE_PATTERNS) {
+    if (negative.pattern.test(current)) {
+      return rejected('act.effect.v1', negative.rule, negative.reason);
+    }
+  }
+
+  if (sourceKind === 'documentation') {
+    return rejected(
+      'act.effect.v1',
+      'documentation-effect-mention',
+      'Documentation can describe an action but does not establish an executable effect path.'
+    );
+  }
+
+  if (sourceKind === 'test') {
+    return rejected(
+      'act.effect.v1',
+      'test-only-effect-path',
+      'A test callsite does not establish that the production system contains the same executable effect path.'
+    );
+  }
+
+  if (sourceKind !== 'implementation') {
+    return rejected(
+      'act.effect.v1',
+      'non-implementation-effect-path',
+      'ACT v1 requires implementation evidence; config/workflow execution adapters are deferred.'
+    );
+  }
+
+  if (ACT_FILE_WRITE_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'act.effect.v1',
+      'filesystem-write-effect',
+      'The implementation contains a concrete filesystem mutation callsite.'
+    );
+  }
+
+  if (ACT_SEND_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'act.effect.v1',
+      'message-send-effect',
+      'The implementation contains a concrete message/mail/transport send or publish callsite.'
+    );
+  }
+
+  if (ACT_REPOSITORY_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'act.effect.v1',
+      'repository-commit-effect',
+      'The implementation contains a concrete repository/transaction commit or push callsite.'
+    );
+  }
+
+  if (ACT_DEPLOY_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (ACT_PATH_PATTERN.test(pathText) || ACT_SUPPORT_PATTERN.test(surrounding)) {
+      return accepted(
+        'act.effect.v1',
+        'deployment-effect',
+        'The deploy callsite is coupled to an implementation path or neighborhood that represents an executable release/deployment effect.'
+      );
+    }
+    return rejected(
+      'act.effect.v1',
+      'unresolved-deploy-call',
+      'A generic deploy call without runtime/deployment context is insufficient to establish ACT.'
+    );
+  }
+
+  if (ACT_MUTATION_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (ACT_PATH_PATTERN.test(pathText) || ACT_SUPPORT_PATTERN.test(surrounding)) {
+      return accepted(
+        'act.effect.v1',
+        'mutation-effect',
+        'The implementation contains a concrete state/database/repository mutation callsite.'
+      );
+    }
+    return rejected(
+      'act.effect.v1',
+      'unresolved-mutation-call',
+      'A generic mutate call without state/runtime context is insufficient to establish ACT.'
+    );
+  }
+
+  if (ACT_EXECUTION_PATTERNS.some((pattern) => pattern.test(current))) {
+    if (ACT_PATH_PATTERN.test(pathText) || ACT_SUPPORT_PATTERN.test(surrounding)) {
+      return accepted(
+        'act.effect.v1',
+        'execution-dispatch-path',
+        'The implementation contains a concrete execute/dispatch call tied to a runtime, workflow, action, or effect path.'
+      );
+    }
+    return rejected(
+      'act.effect.v1',
+      'unresolved-execution-call',
+      'A generic execute/dispatch call without runtime/effect context is insufficient to establish ACT.'
+    );
+  }
+
+  if (ACT_GENERIC_PATTERN.test(current)) {
+    return rejected(
+      'act.effect.v1',
+      'unresolved-effect-token',
+      'Generic execute, dispatch, send, write, commit, deploy, mutate, or mutation vocabulary is insufficient to establish ACT.'
+    );
+  }
+
+  return rejected(
+    'act.effect.v1',
+    'unresolved-act-candidate',
+    'The ACT lexical candidate could not be resolved to a concrete effect-bearing implementation path.'
+  );
+}
+
 export function resolveSemanticCandidate(candidate) {
   if (candidate?.detector?.id === 'who.agent-definition') return resolveWhoActor(candidate);
   if (candidate?.detector?.id === 'know.context-resource') return resolveKnowContext(candidate);
   if (candidate?.detector?.id === 'think.model-cognition') return resolveThinkCognition(candidate);
   if (candidate?.detector?.id === 'can.tool-surface') return resolveCanCapability(candidate);
   if (candidate?.detector?.id === 'may.authority-control') return resolveMayAuthority(candidate);
+  if (candidate?.detector?.id === 'act.effect-path') return resolveActEffect(candidate);
 
   return {
     accepted: true,
