@@ -45,6 +45,9 @@ export function createAgentHypothesis({ agentContextPackage, statement, relatedO
       // Explicit marking: this is a hypothesis, never a verified fact, never
       // a receipt, never authority. Evidence state is pinned to INFERRED —
       // agent statements cannot claim EXPLICIT/OBSERVED/UNKNOWN semantics.
+      // INFERRED here is the epistemic classification of the hypothesis,
+      // not a new AVGL evidence record: only a downstream AVGL evidence gate
+      // may ever accept it as a source-bound semantic assertion.
       marked: 'INFERRED_HYPOTHESIS',
       evidence_state: 'INFERRED',
       statement,
