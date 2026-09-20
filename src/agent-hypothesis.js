@@ -4,11 +4,9 @@
 // destined for the normal AVGL evidence gates (SoT §24/§15/§16). It is a pure
 // constructor: it writes nothing, verifies nothing, authorizes nothing.
 
-export const AGENT_HYPOTHESIS_ARTIFACT = 'avgl-agent-hypothesis-v1';
+import { validateAgentContextPackage } from './agent-context-package.js';
 
-function isRecord(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
+export const AGENT_HYPOTHESIS_ARTIFACT = 'avgl-agent-hypothesis-v1';
 
 function validString(value, maxLength = 2000) {
   return typeof value === 'string' && value.length > 0 && value.length <= maxLength;
@@ -17,18 +15,45 @@ function validString(value, maxLength = 2000) {
 export function createAgentHypothesis({ agentContextPackage, statement, relatedObjectIds = [] } = {}) {
   const errors = [];
 
-  if (!isRecord(agentContextPackage) || agentContextPackage.schema_version !== '1' || !validString(agentContextPackage.package_id, 160)) {
-    errors.push({ code: 'invalid_agent_context_package', path: '$.agentContextPackage', message: 'A validated agent context package is required as hypothesis origin.' });
+  // The origin must be a package this contract actually validated. A shape that
+  // merely looks like one (schema_version + package_id) would otherwise yield a
+  // package-linked hypothesis with no binding at all: no ir_revision, no
+  // provenance, no verifiable source.
+  const origin = validateAgentContextPackage(agentContextPackage);
+  if (!origin.ok) {
+    errors.push({
+      code: 'invalid_agent_context_package',
+      path: '$.agentContextPackage',
+      message: 'A validated agent context package is required as hypothesis origin.',
+      cause: origin.errors
+    });
   }
   if (!validString(statement)) {
     errors.push({ code: 'invalid_statement', path: '$.statement', message: 'A hypothesis statement string is required.' });
   }
-  if (!Array.isArray(relatedObjectIds)) {
+
+  const relatedIds = Array.isArray(relatedObjectIds) ? relatedObjectIds : null;
+  if (relatedIds === null) {
     errors.push({ code: 'invalid_related_object_ids', path: '$.relatedObjectIds', message: 'relatedObjectIds must be an array of package object ids.' });
   } else {
-    for (const id of relatedObjectIds) {
+    for (const id of relatedIds) {
       if (typeof id !== 'string') {
         errors.push({ code: 'invalid_related_object_id', path: '$.relatedObjectIds', message: 'relatedObjectIds entries must be strings.' });
+      }
+    }
+  }
+
+  // Hypotheses may only reference objects the origin package actually exposes:
+  // an unbound id would smuggle context the package never granted.
+  if (errors.length === 0) {
+    const exposed = new Set(origin.package.objects.map((node) => node.id));
+    for (const [index, id] of [...new Set(relatedIds)].entries()) {
+      if (!exposed.has(id)) {
+        errors.push({
+          code: 'unbound_related_object_id',
+          path: `$.relatedObjectIds[${index}]`,
+          message: `relatedObjectIds entry ${id} is not present in the origin package objects.`
+        });
       }
     }
   }
@@ -51,10 +76,10 @@ export function createAgentHypothesis({ agentContextPackage, statement, relatedO
       marked: 'INFERRED_HYPOTHESIS',
       evidence_state: 'INFERRED',
       statement,
-      related_object_ids: [...new Set(relatedObjectIds)],
+      related_object_ids: [...new Set(relatedIds)],
       source: {
-        agent_context_package_id: agentContextPackage.package_id,
-        ir_revision: agentContextPackage.source_binding ? agentContextPackage.source_binding.ir_revision : undefined
+        agent_context_package_id: origin.package.package_id,
+        ir_revision: origin.package.source_binding.ir_revision
       },
       // The only forward path: pending review through the normal AVGL
       // evidence gates. Nothing in this envelope constitutes verification.
