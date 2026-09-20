@@ -57,6 +57,49 @@ DISCOVER → EXTRACT → CLASSIFY → BIND → RELATE → RESOLVE → SYNTHESIZE
 - One artifact may hold multiple identities; do not create duplicate source objects merely to express different vocabulary roles.
 - Renderer layout is never semantic truth. Every asserted object, identity, relation, state, or effect must be represented in the IR and evidence-bound or explicitly unknown.
 
+## CI execution authority
+
+The repository's authoritative CI validation path may run through the configured
+GitHub Actions self-hosted runner operated via GitHub user `t-wim`. This is an
+alternate execution path for the required CI gates when the default hosted runner
+is unavailable — not permission to skip validation, reviews, branch protection,
+or tests.
+
+Observed CI baseline (always verify against `.github/workflows/` before relying
+on it):
+
+- `CI` (`.github/workflows/ci.yml`) — trigger `push` + `pull_request`, required
+  validation commands `npm run check` and `npm test`.
+- `Extract AVGL brand assets` (`.github/workflows/extract-avgl-brand-assets.yml`) —
+  one-shot branch-scoped asset extraction helper, not a validation gate.
+
+Runner labels are declared by each workflow. Do not invent labels such as
+`runs-on: [self-hosted, t-wim]`; `t-wim` identifies the established
+runner/operator path, not necessarily the literal GitHub Actions label.
+
+Classify CI evidence explicitly:
+
+- `CI_PASS` — the intended runner executed the required validation steps and all passed.
+- `CI_FAIL` — the intended runner executed the required steps and a validation step failed.
+- `CI_PENDING` — the authoritative validation has not completed.
+- `CI_INFRASTRUCTURE_FAILURE` — the workflow failed before validation executed, for
+  example no runner assignment or no materialized steps. Indicators such as
+  `runner_id: 0`, `steps: []` / `steps: null`, or no executed test/check command
+  are not by themselves evidence of a code regression; do not change product code
+  merely to "fix" such a run.
+
+When the `t-wim` self-hosted runner executes a step and that step fails, treat the
+result as real implementation evidence: inspect → classify → fix if in scope →
+rerun. Never dismiss an executed failure as infrastructure without evidence, and
+never weaken product code, tests, or governance rules merely to compensate for a
+runner-allocation/startup failure.
+
+Invariants:
+
+`SELF_HOSTED_RUNNER != SKIP_CI`
+`SELF_HOSTED_RUNNER != SKIP_TESTS`
+`SELF_HOSTED_RUNNER != FORCE_MERGE`
+`SELF_HOSTED_RUNNER != BRANCH_PROTECTION_BYPASS`
 
 ## Private source invariants
 
