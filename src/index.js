@@ -36,6 +36,7 @@ export { SEMANTIC_CLASSES, EVIDENCE_STATES, HUMAN_LABELS } from './constants.js'
 export { validateProjectionPolicy } from './projection-policy.js';
 export { evaluateProjection } from './context-projection.js';
 export { generateContextPackage } from './context-package.js';
+export { createAgentContextPackage, validateAgentContextPackage } from './agent-context-package.js';
 
 export async function analyzeRepository(rootPath = '.', options = {}) {
   const discovery = await discoverRepository(rootPath, options);

@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avgl.dev/schema/agent-context-package-v1.json",
+  "title": "AVGL Agent Context Package v1",
+  "description": "AVGL-0295 agent-consumption contract. The agent receives an AVGL lens, not the repository: the package is a read-only, governed view of a 0296 context package. Producing or consuming it creates no semantics, no evidence, no capability, no authority, no execution, and no verification.",
+  "type": "object",
+  "required": ["schema_version", "package_id", "source_binding", "objects", "relations", "constraints", "boundaries", "provenance"],
+  "properties": {
+    "schema_version": {
+      "const": "1"
+    },
+    "package_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "source_binding": {
+      "type": "object",
+      "required": ["ir_revision", "projection_policy_id", "projection_policy_revision"],
+      "properties": {
+        "ir_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "projection_policy_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "projection_policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "governance_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 280
+        }
+      },
+      "additionalProperties": false
+    },
+    "consumer": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "additionalProperties": false
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "semanticClass", "label", "statement", "evidenceState", "confidence", "evidence", "evidenceCount"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "semanticClass": { "enum": ["WHO", "KNOW", "THINK", "CAN", "MAY", "ACT", "DID"] },
+          "label": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "evidenceState": { "enum": ["EXPLICIT", "INFERRED", "OBSERVED", "UNKNOWN"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "line", "sourceKind"],
+              "properties": {
+                "path": { "type": "string" },
+                "line": { "type": "integer", "minimum": 1 },
+                "sourceKind": { "enum": ["implementation", "config", "test", "documentation", "other"] }
+              },
+              "additionalProperties": false
+            }
+          },
+          "evidenceCount": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "from", "to", "basis", "confidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "from": {
+            "type": "object",
+            "required": ["kind", "id"],
+            "properties": { "kind": { "type": "string" }, "id": { "type": "string" } },
+            "additionalProperties": false
+          },
+          "to": {
+            "type": "object",
+            "required": ["kind", "id"],
+            "properties": { "kind": { "type": "string" }, "id": { "type": "string" } },
+            "additionalProperties": false
+          },
+          "basis": { "enum": ["EXPLICIT", "INFERRED", "DERIVED"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "boundaries": {
+      "type": "object",
+      "required": ["hidden_count", "unavailable_count"],
+      "properties": {
+        "hidden_count": { "type": "integer", "minimum": 0 },
+        "unavailable_count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["created_by", "authorized_by", "projection_package_id"],
+      "properties": {
+        "created_by": {
+          "type": "object",
+          "required": ["engine", "engine_version"],
+          "properties": {
+            "engine": { "type": "string", "minLength": 1 },
+            "engine_version": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "authorized_by": {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "const": "governance_record" },
+            "id": { "type": "string", "minLength": 1, "maxLength": 280 }
+          },
+          "additionalProperties": false
+        },
+        "projection_package_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "generated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
