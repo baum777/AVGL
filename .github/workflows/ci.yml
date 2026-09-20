@@ -8,8 +8,28 @@ permissions:
   contents: read
 
 jobs:
+  # Supplementary hosted execution. The authoritative validation gate is the
+  # test-self-hosted job below (see AGENTS.md "CI execution authority").
   test:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax check
+        run: npm run check
+      - name: Test
+        run: npm test
+
+  # Authoritative validation gate. Runner labels are the exact labels of the
+  # workspace self-hosted runner (unitera-ci-01: self-hosted, Linux, X64,
+  # unitera-ci). As of 2026-09-20 no runner with these labels is registered
+  # on THIS repository, so this job stays queued (CI_PENDING) until the
+  # operator registers one here. These labels must not be changed to hosted
+  # equivalents and no other self-hosted labels may be substituted.
+  test-self-hosted:
+    runs-on: [self-hosted, Linux, X64, unitera-ci]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
