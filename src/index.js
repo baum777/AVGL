@@ -37,6 +37,8 @@ export { validateProjectionPolicy } from './projection-policy.js';
 export { evaluateProjection } from './context-projection.js';
 export { generateContextPackage } from './context-package.js';
 export { createAgentContextPackage, validateAgentContextPackage } from './agent-context-package.js';
+export { createContextSyncRuntime, validateContextSyncRecord } from './context-sync-runtime.js';
+export { validateContextSyncMessage, assertTrustedContextMessageSource } from './context-sync-messages.js';
 
 export async function analyzeRepository(rootPath = '.', options = {}) {
   const discovery = await discoverRepository(rootPath, options);
