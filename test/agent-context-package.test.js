@@ -249,6 +249,140 @@ test('materializer fails closed on malformed projection packages', () => {
   assert.ok(noAuthorization.errors.some((error) => error.code === 'missing_projection_authorization'));
 });
 
+// --- Review hardening 2026-09-20 (PR #39 threads R-01..R-03) -----------------
+
+test('R-01: validator rejects evidence items carrying raw source fields', () => {
+  const pkg = materialize().package;
+
+  for (const smuggledField of ['snippet', 'content', 'detector', 'excerpt']) {
+    const poisoned = structuredClone(pkg);
+    poisoned.objects[0].evidence[0][smuggledField] = 'raw private source';
+    const outcome = validateAgentContextPackage(poisoned);
+    assert.equal(outcome.ok, false, `${smuggledField} must not pass validation`);
+    assert.ok(outcome.errors.some((error) => error.code === 'undeclared_evidence_field' && error.path.endsWith(`.${smuggledField}`)),
+      `${smuggledField} must be named by an undeclared_evidence_field error`);
+    assert.equal(outcome.package, null);
+  }
+});
+
+test('R-01: validator rejects undeclared fields at every contract level', () => {
+  const pkg = materialize().package;
+
+  const topLevel = structuredClone(pkg);
+  topLevel.content = { raw: 'free-form repository text' };
+  let outcome = validateAgentContextPackage(topLevel);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'undeclared_package_field' && error.path === '$.content'));
+
+  const onObject = structuredClone(pkg);
+  onObject.objects[0].permissions = ['deploy'];
+  outcome = validateAgentContextPackage(onObject);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'undeclared_object_field' && error.path === '$.objects[0].permissions'));
+
+  const onEvidence = structuredClone(pkg);
+  onEvidence.objects[0].evidence[0].semanticResolution = { mode: 'SEMANTIC' };
+  outcome = validateAgentContextPackage(onEvidence);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'undeclared_evidence_field'));
+
+  const onSourceBinding = structuredClone(pkg);
+  onSourceBinding.source_binding.raw_source_ref = 'src/private.js';
+  outcome = validateAgentContextPackage(onSourceBinding);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'undeclared_source_binding_field'));
+});
+
+test('R-01: malformed package elements are rejected, never skipped silently', () => {
+  const pkg = materialize().package;
+
+  const nullObject = structuredClone(pkg);
+  nullObject.objects.push(null);
+  let outcome = validateAgentContextPackage(nullObject);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'invalid_object'));
+
+  const idlessObject = structuredClone(pkg);
+  delete idlessObject.objects[0].id;
+  outcome = validateAgentContextPackage(idlessObject);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'missing_object_id'));
+
+  const primitiveRelation = structuredClone(pkg);
+  primitiveRelation.relations.push('not-an-object');
+  outcome = validateAgentContextPackage(primitiveRelation);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'invalid_relation'));
+
+  const objectConstraint = structuredClone(pkg);
+  objectConstraint.constraints.push({ smuggled: true });
+  outcome = validateAgentContextPackage(objectConstraint);
+  assert.equal(outcome.ok, false);
+  assert.ok(outcome.errors.some((error) => error.code === 'invalid_constraint'));
+});
+
+test('R-02: materializer returns errors instead of throwing on malformed elements', () => {
+  const base = {
+    artifact: 'avgl-context-package-v1',
+    package_id: 'p',
+    ir_binding: { revision: 'r' },
+    policy_binding: { policy_id: 'a', revision: 'b' },
+    provenance: { authorized_by: { type: 'governance_record', id: 'ADR-0295-001' } },
+    boundaries: { hidden_count: 0, unavailable_count: 0 }
+  };
+
+  const nullObject = createAgentContextPackage({ projectionPackage: { ...base, objects: [null], relations: [], constraints: [] } });
+  assert.equal(nullObject.ok, false);
+  assert.ok(nullObject.errors.some((error) => error.code === 'invalid_projection_object'));
+  assert.equal(nullObject.package, null);
+
+  const emptyRelation = createAgentContextPackage({ projectionPackage: { ...base, objects: [], relations: [{}], constraints: [] } });
+  assert.equal(emptyRelation.ok, false);
+  assert.ok(emptyRelation.errors.some((error) => error.code === 'invalid_projection_relation'));
+  assert.equal(emptyRelation.package, null);
+});
+
+test('R-02: materializer fails closed on missing projection boundaries', () => {
+  const projectionPackage = projectionPackageFixture();
+  delete projectionPackage.boundaries;
+  const result = createAgentContextPackage({ projectionPackage, consumerContext: { agent_id: 'agent-alpha' } });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.code === 'invalid_projection_boundaries'));
+  assert.equal(result.package, null);
+});
+
+test('R-02: materializer never emits a package its own validator rejects', () => {
+  const projectionPackage = projectionPackageFixture();
+  delete projectionPackage.objects[0].label;
+  const result = createAgentContextPackage({ projectionPackage, consumerContext: { agent_id: 'agent-alpha' } });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.code === 'missing_object_label'));
+  assert.equal(result.package, null);
+});
+
+test('R-03: a shape that only looks like a package cannot originate a hypothesis', () => {
+  const fake = createAgentHypothesis({ agentContextPackage: { schema_version: '1', package_id: 'fake' }, statement: 'deployment succeeded' });
+  assert.equal(fake.ok, false);
+  const originError = fake.errors.find((error) => error.code === 'invalid_agent_context_package');
+  assert.ok(originError, 'the fake package must be named by invalid_agent_context_package');
+  assert.ok(Array.isArray(originError.cause) && originError.cause.length > 0, 'the underlying validation errors must be attached');
+  assert.equal(fake.hypothesis, null);
+});
+
+test('R-03: hypotheses may only reference objects the origin package exposes', () => {
+  const pkg = materialize({ agent_id: 'agent-alpha' }).package;
+
+  const unbound = createAgentHypothesis({ agentContextPackage: pkg, statement: 's', relatedObjectIds: ['ghost.node'] });
+  assert.equal(unbound.ok, false);
+  assert.ok(unbound.errors.some((error) => error.code === 'unbound_related_object_id'));
+  assert.equal(unbound.hypothesis, null);
+
+  const bound = createAgentHypothesis({ agentContextPackage: pkg, statement: 's', relatedObjectIds: ['runtime.api', 'deploy.pipeline'] });
+  assert.equal(bound.ok, true);
+  assert.deepEqual(bound.hypothesis.related_object_ids, ['runtime.api', 'deploy.pipeline']);
+  assert.equal(bound.hypothesis.source.ir_revision, pkg.source_binding.ir_revision);
+});
+
 test('public seam exposes the two 0295 contracts', async () => {
   const module = await import('../src/index.js');
   assert.equal(typeof module.createAgentContextPackage, 'function');
