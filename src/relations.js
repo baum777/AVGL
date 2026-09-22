@@ -5,6 +5,9 @@ const CODE_EXTENSIONS = new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx']);
 const RESOLVE_EXTENSIONS = ['', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.json', '.yaml', '.yml'];
 const LOCAL_MUTATION_METHODS = new Set(['push','pop','shift','unshift','splice','sort','reverse','fill','copyWithin']);
 
+const PROVIDER_BOUNDARY_RECEIVER = /(?:^|\.)(?:provider|gateway|apiClient|remoteClient)$/i;
+const PROVIDER_MUTATION_METHOD = /^(?:request|create|update|delete|refund|charge|cancel|submit|send|publish|post|put|patch)/i;
+
 const EXTERNAL_EFFECT_RULES = Object.freeze([
   { kind:'NETWORK_REQUEST', semanticClass:'ACT', confidence:0.94, pattern:/^(?:fetch|axios\.(?:post|put|patch|delete)|[^.]+\.(?:request|post|put|patch|delete))$/i },
   { kind:'FILESYSTEM_WRITE', semanticClass:'ACT', confidence:0.97, pattern:/^(?:fs\.)?(?:writeFile|writeFileSync|appendFile|appendFileSync|rm|rmSync|rename|renameSync|unlink|unlinkSync|mkdir|mkdirSync)$/i },
@@ -184,6 +187,15 @@ function detectPathReferences(path, content, sourceKind) {
 
 function classifyCallEffect(call) {
   const method = call.method ?? '';
+  if (PROVIDER_BOUNDARY_RECEIVER.test(call.receiver ?? '') && PROVIDER_MUTATION_METHOD.test(method)) {
+    return {
+      effectKind:'NETWORK_REQUEST',
+      external:true,
+      semanticClass:'ACT',
+      confidence:0.95,
+      reason:'provider/gateway boundary receiver plus effect-bearing operation'
+    };
+  }
   if (LOCAL_MUTATION_METHODS.has(method) && !/(?:git|github|repo|repository|octokit|client)$/i.test(call.receiver ?? '')) {
     return { effectKind:'LOCAL_MUTATION', external:false, semanticClass:null, confidence:0.99, reason:'collection mutation; not an external effect' };
   }
