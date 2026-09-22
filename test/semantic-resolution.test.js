@@ -531,6 +531,30 @@ test('ACT accepts database mutation effects', () => {
   assert.equal(act.semanticResolution.rule, 'mutation-effect');
 });
 
+test('ACT accepts provider-boundary mutation calls without naming a specific domain method', () => {
+  const content = 'const receipt = provider.requestRefund({ orderId, amountEur });';
+  const discovery = discoverFiles([{
+    path: 'src/runtime/refund-executor.js',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  const act = discovery.observations.find((item) => item.candidateClass === 'ACT');
+  assert.ok(act);
+  assert.equal(act.semanticResolution.rule, 'provider-boundary-effect');
+});
+
+test('provider reads do not become ACT merely because the receiver is external-looking', () => {
+  const content = 'const observed = provider.getRefund(providerRef);';
+  const discovery = discoverFiles([{
+    path: 'src/verification/refund-verifier.js',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'ACT'), false);
+});
+
 test('ACT accepts runtime executor calls', () => {
   const content = 'await executor.execute(workOrder);';
   const discovery = discoverFiles([{
