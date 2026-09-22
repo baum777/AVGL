@@ -113,3 +113,23 @@ test('local calls are not upgraded to CALLS_SYMBOL without a matching import/exp
   const model = buildRelationModel(files);
   assert.equal(model.relations.some((relation) => relation.type === 'CALLS_SYMBOL'), false);
 });
+
+
+test('provider boundary mutations are external ACT effects while provider reads are not', () => {
+  const file = {
+    path:'src/runtime/refund-executor.js',
+    sourceKind:'implementation',
+    content:[
+      'const receipt = provider.requestRefund({ orderId, amountEur });',
+      'const observed = provider.getRefund(receipt.providerRef);'
+    ].join('\n')
+  };
+
+  const bundle = extractRelationFacts(file);
+  const external = bundle.effects.filter((effect) => effect.external);
+  assert.equal(external.length, 1);
+  assert.equal(external[0].callee, 'provider.requestRefund');
+  assert.equal(external[0].effectKind, 'NETWORK_REQUEST');
+  assert.equal(external[0].semanticClass, 'ACT');
+  assert.equal(bundle.effects.some((effect) => effect.callee === 'provider.getRefund'), false);
+});
