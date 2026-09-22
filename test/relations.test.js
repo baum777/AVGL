@@ -133,3 +133,21 @@ test('provider boundary mutations are external ACT effects while provider reads 
   assert.equal(external[0].semanticClass, 'ACT');
   assert.equal(bundle.effects.some((effect) => effect.callee === 'provider.getRefund'), false);
 });
+
+
+test('provider reads emit observation relations without creating ACT effects', () => {
+  const file = {
+    path:'src/verification/refund-verifier.js',
+    sourceKind:'implementation',
+    content:'const observed = provider.getRefund(providerRef);\n'
+  };
+
+  const model = buildRelationModel([file]);
+  const observation = model.relations.find((relation) => relation.type === 'OBSERVES_EXTERNAL');
+  assert.ok(observation);
+  assert.equal(observation.from.id, 'src/verification/refund-verifier.js');
+  assert.equal(observation.to.id, 'provider.getRefund');
+  assert.equal(observation.basis, 'INFERRED');
+  assert.equal(observation.readOnly, true);
+  assert.equal(model.effects.some((effect) => effect.external), false);
+});

@@ -1005,6 +1005,10 @@ const DID_RECONCILIATION_PATTERNS = Object.freeze([
   /\bvalidateConsistency\s*\(/i
 ]);
 
+const DID_OBSERVED_STATE_COMPARISON_PATTERN = /\b[A-Za-z_$][\w$]*\.status\s*(?:===|!==|==|!=)\s*['"`][A-Za-z0-9_.:-]+['"`]/i;
+const DID_EXTERNAL_OBSERVATION_PATTERN = /\b(?:provider|gateway|apiClient|remoteClient)\.(?:get|read|fetch|lookup|find|observe|check|list|query|status)[A-Za-z_$\d]*\s*\(/i;
+const DID_VERIFIED_TRUE_PATTERN = /\bverified\s*:\s*true\b/i;
+
 const DID_EXTERNAL_CONFIRMATION_PATTERNS = Object.freeze([
   /\bconfirmTransaction\s*\(/i,
   /\bverifyWebhookSignature\s*\(/i,
@@ -1075,6 +1079,19 @@ function resolveDidEvidence({ line, lines, lineIndex }) {
       'did.evidence.v1',
       'audit-without-outcome',
       'An evidence or audit record without result/outcome evidence is not proof.'
+    );
+  }
+
+  const verificationWindow = windowText(lines ?? [current], lineIndex ?? 0, 8);
+  if (
+    DID_OBSERVED_STATE_COMPARISON_PATTERN.test(current) &&
+    DID_EXTERNAL_OBSERVATION_PATTERN.test(verificationWindow) &&
+    DID_VERIFIED_TRUE_PATTERN.test(verificationWindow)
+  ) {
+    return accepted(
+      'did.evidence.v1',
+      'observed-state-verification',
+      'An external provider state is observed, compared against an explicit success state, and can produce a verified outcome.'
     );
   }
 

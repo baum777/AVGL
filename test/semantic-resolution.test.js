@@ -679,6 +679,41 @@ test('DID accepts state verification', () => {
   assert.equal(did.semanticResolution.rule, 'state-verification');
 });
 
+test('DID resolves observed provider state comparison into a verified outcome path', () => {
+  const content = [
+    'export function verifyRefund({ execution, provider }) {',
+    '  const observed = provider.getRefund(execution.receipt.providerRef);',
+    "  if (!observed || observed.status !== 'settled') {",
+    "    return { verified: false, reason: 'OUTCOME_NOT_SETTLED' };",
+    '  }',
+    "  return { verified: true, outcome: 'REFUND_SETTLED' };",
+    '}'
+  ].join('\n');
+
+  const discovery = discoverFiles([{
+    path: 'src/verification/refund-verifier.js',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const did = discovery.observations.find((item) => item.candidateClass === 'DID');
+  assert.ok(did);
+  assert.equal(did.semanticResolution.rule, 'observed-state-verification');
+});
+
+test('a status comparison without external observation and verified outcome stays below DID', () => {
+  const content = [
+    "if (job.status !== 'settled') {",
+    "  return { verified: false };",
+    '}'
+  ].join('\n');
+  const discovery = discoverFiles([{
+    path: 'src/domain/status-check.js',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  assert.equal(discovery.observations.some((item) => item.candidateClass === 'DID'), false);
+});
+
 test('DID accepts reconciliation proof', () => {
   const content = 'reconcile(expected, actual);';
   const discovery = discoverFiles([{ path: 'src/evidence/reconcile.mjs', content, size: Buffer.byteLength(content, 'utf8') }]);
