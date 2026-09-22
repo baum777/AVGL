@@ -140,25 +140,11 @@ function roleForPath(path) {
   return table.find(([pattern]) => pattern.test(lower))?.[1] ?? ['Repository file', 'Repository-Datei'];
 }
 
-function effectForSignals(signals, locale) {
-  const de = locale === 'de';
-  const pieces = [];
-  if (signals.includes('MAY')) pieces.push(de ? 'steuert Authority, Permissions oder Freigaben' : 'controls authority, permissions, or approvals');
-  if (signals.includes('ACT')) pieces.push(de ? 'enthält potenzielle Effect-/Execution-Pfade' : 'contains potential effect or execution paths');
-  if (signals.includes('DID')) pieces.push(de ? 'erzeugt oder prüft Evidence / Verifikation' : 'emits or verifies evidence');
-  if (signals.includes('CAN')) pieces.push(de ? 'beschreibt oder implementiert Tool-/Capability-Zugriff' : 'describes or implements tool/capability access');
-  if (signals.includes('KNOW')) pieces.push(de ? 'arbeitet mit Context, State oder Memory' : 'works with context, state, or memory');
-  if (signals.includes('THINK')) pieces.push(de ? 'enthält Model-, Planning- oder Reasoning-Signale' : 'contains model, planning, or reasoning signals');
-  if (signals.includes('WHO')) pieces.push(de ? 'definiert Agent-, Role- oder Harness-Struktur' : 'defines agent, role, or harness structure');
-  return pieces.slice(0, 3).join(de ? '; ' : '; ');
-}
-
 export function summarizeRepositoryFile(file) {
   const path = file.path;
   const content = file.content ?? '';
   const role = roleForPath(path);
   const sourceKind = file.sourceKind ?? sourceKindForPath(path);
-  const signals = content ? semanticSignals(content) : [];
   const symbols = content ? codeSymbols(content) : [];
   const heading = content ? firstHeading(content) : null;
   let jsonMeta = null;
@@ -178,8 +164,6 @@ export function summarizeRepositoryFile(file) {
 
   const name = path.split('/').pop();
   const subject = jsonMeta?.title || heading || name;
-  const effectEn = effectForSignals(signals, 'en');
-  const effectDe = effectForSignals(signals, 'de');
   const symbolEn = symbols.length ? ` Exposes or defines: ${symbols.slice(0, 6).join(', ')}.` : '';
   const symbolDe = symbols.length ? ` Definiert bzw. exportiert: ${symbols.slice(0, 6).join(', ')}.` : '';
   const jsonEn = jsonMeta?.description ? ` Declared purpose: ${jsonMeta.description}` : '';
@@ -192,10 +176,11 @@ export function summarizeRepositoryFile(file) {
     role: { en: role[0], de: role[1] },
     subject,
     summary: {
-      en: `${role[0]} “${subject}”.${symbolEn}${effectEn ? ` Functionally, it ${effectEn}.` : ''}${jsonEn}`.trim(),
-      de: `${role[1]} „${subject}“.${symbolDe}${effectDe ? ` Funktional ${effectDe}.` : ''}${jsonDe}`.trim()
+      en: `${role[0]} “${subject}”.${symbolEn}${jsonEn}`.trim(),
+      de: `${role[1]} „${subject}“.${symbolDe}${jsonDe}`.trim()
     },
-    semanticClasses: signals,
+    semanticClasses: [],
+    semanticSource: 'canonical-ir',
     symbols,
     lineCount: content ? content.split(/\r?\n/).length : null,
     jsonMeta,
