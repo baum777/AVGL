@@ -8,6 +8,8 @@ const LOCAL_MUTATION_METHODS = new Set(['push','pop','shift','unshift','splice',
 const PROVIDER_BOUNDARY_RECEIVER = /(?:^|\.)(?:provider|gateway|apiClient|remoteClient)$/i;
 const PROVIDER_MUTATION_METHOD = /^(?:request|create|update|delete|refund|charge|cancel|submit|send|publish|post|put|patch)/i;
 
+const PROVIDER_READ_METHOD = /^(?:get|read|fetch|lookup|find|observe|check|list|query|status)/i;
+
 const EXTERNAL_EFFECT_RULES = Object.freeze([
   { kind:'NETWORK_REQUEST', semanticClass:'ACT', confidence:0.94, pattern:/^(?:fetch|axios\.(?:post|put|patch|delete)|[^.]+\.(?:request|post|put|patch|delete))$/i },
   { kind:'FILESYSTEM_WRITE', semanticClass:'ACT', confidence:0.97, pattern:/^(?:fs\.)?(?:writeFile|writeFileSync|appendFile|appendFileSync|rm|rmSync|rename|renameSync|unlink|unlinkSync|mkdir|mkdirSync)$/i },
@@ -326,6 +328,23 @@ export function resolveRelations(fileFacts,inventoryPaths=[]) {
 
     for (const call of bundle.facts.filter((fact)=>fact.factType==='CALL')) {
       relations.push(relation('CALLS',{kind:'file',id:bundle.path},{kind:'callable',id:call.callee},'EXPLICIT',0.9,call.evidence));
+
+      if (PROVIDER_BOUNDARY_RECEIVER.test(call.receiver ?? '') && PROVIDER_READ_METHOD.test(call.method ?? '')) {
+        relations.push(relation(
+          'OBSERVES_EXTERNAL',
+          {kind:'file',id:bundle.path},
+          {kind:'external_observation',id:call.callee},
+          'INFERRED',
+          0.92,
+          call.evidence,
+          {
+            external:true,
+            readOnly:true,
+            callee:call.callee,
+            reason:'provider/gateway read call observes external state without establishing an effect'
+          }
+        ));
+      }
 
       if (call.callee.includes('.')) continue;
       const binding = importBindings.find((candidate)=>candidate.localName===call.callee);
