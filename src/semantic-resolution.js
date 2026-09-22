@@ -594,6 +594,11 @@ const MAY_SCOPE_PATTERNS = Object.freeze([
   /\brequiredScopes?\s*[:=]/i
 ]);
 
+const MAY_APPROVAL_DECISION_PATTERN = /\bapproval\?\.approved\s*===?\s*true\b/i;
+const MAY_APPROVAL_SCOPE_PATTERN = /\bapproval\?\.scope\s*===?\s*['"`][^'"`]+['"`]/i;
+const MAY_POLICY_COMPARISON_PATTERN = /\bif\s*\([^)]*\bpolicy\.[A-Za-z_$][\w$]*\s*(?:<=|>=|<|>|===?|!==?)\s*[^)]*\)/i;
+const MAY_GRANTED_RESULT_PATTERN = /\bgranted\s*:\s*(?:true|false)\b/i;
+
 const MAY_REVOCATION_PATTERNS = Object.freeze([
   /\b(?:revokeGrant|revokePermission|revokeAuthorization|revokeAuthority)\s*\(/i,
   /\b(?:isRevoked|revokedAt|revoked_at|revocationReason|revocation_reason)\s*[:=]/i,
@@ -708,6 +713,33 @@ function resolveMayAuthority({ path, line, lines, lineIndex, sourceKind }) {
       'may.authority.v1',
       'non-authority-revocation-mention',
       'Revocation vocabulary outside executable/config/test authority evidence is insufficient to establish MAY.'
+    );
+  }
+
+  const decisionWindow = windowText(lines ?? [current], lineIndex ?? 0, 6);
+
+  if (
+    MAY_APPROVAL_DECISION_PATTERN.test(current) &&
+    MAY_APPROVAL_SCOPE_PATTERN.test(decisionWindow) &&
+    MAY_GRANTED_RESULT_PATTERN.test(decisionWindow) &&
+    (MAY_AUTHORITY_PATH_PATTERN.test(pathText) || MAY_AUTHORITY_SUPPORT_PATTERN.test(decisionWindow))
+  ) {
+    return accepted(
+      'may.authority.v1',
+      'approval-decision-binding',
+      'An explicit approval predicate and scoped authority decision resolve to a granted/denied authority result.'
+    );
+  }
+
+  if (
+    MAY_POLICY_COMPARISON_PATTERN.test(current) &&
+    MAY_GRANTED_RESULT_PATTERN.test(decisionWindow) &&
+    (MAY_AUTHORITY_PATH_PATTERN.test(pathText) || MAY_AUTHORITY_SUPPORT_PATTERN.test(decisionWindow))
+  ) {
+    return accepted(
+      'may.authority.v1',
+      'policy-decision-binding',
+      'An explicit policy threshold/comparison controls a granted/denied authority result.'
     );
   }
 
