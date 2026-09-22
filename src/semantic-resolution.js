@@ -780,6 +780,10 @@ const ACT_MUTATION_PATTERNS = Object.freeze([
   /\b(?:mutate|applyMutation)\s*\(/i
 ]);
 
+const ACT_PROVIDER_BOUNDARY_PATTERNS = Object.freeze([
+  /\b(?:provider|gateway|apiClient|remoteClient)\.(?:request|create|update|delete|refund|charge|cancel|submit|send|publish|post|put|patch)[A-Za-z_$\d]*\s*\(/i
+]);
+
 const ACT_PATH_PATTERN = /(?:^|[\/_.-])(runtime|executors?|effects?|actions?|tools?|adapters?|connectors?|deploy|deployment|git|github|repos?|storage|filesystem|database|db|mail|email|messaging|dispatch)(?:[\/_.-]|$)/i;
 const ACT_SUPPORT_PATTERN = /\b(agent|assistant|workflow|runtime|workOrder|work_order|tool|effect|action|client|repository|database|message|file|path|remote|release|deployment|transaction|payload|request)\b/i;
 const ACT_GENERIC_PATTERN = /\b(?:executor|execute|dispatch|send|write|commit|deploy|mutate|mutation)\b/i;
@@ -885,6 +889,14 @@ function resolveActEffect({ path, line, lines, lineIndex, sourceKind }) {
       'act.effect.v1',
       'unresolved-execution-call',
       'A generic execute/dispatch call without runtime/effect context is insufficient to establish ACT.'
+    );
+  }
+
+  if (ACT_PROVIDER_BOUNDARY_PATTERNS.some((pattern) => pattern.test(current))) {
+    return accepted(
+      'act.effect.v1',
+      'provider-boundary-effect',
+      'A provider/gateway boundary receiver invokes an effect-bearing operation from implementation code.'
     );
   }
 
