@@ -67,7 +67,8 @@ export const DETECTORS = Object.freeze([
       /\b(?:sendMail|sendMessage)\s*\(/i,
       /\b(?:fs(?:\.promises)?\.)?(?:writeFile|writeFileSync|appendFile|appendFileSync|rename|unlink|rm)\s*\(/i,
       /\b(?:git|github|repo|repository|transaction|client)\.(?:commit|push)\s*\(/i,
-      /\b(?:db|database|collection|repository|store)\.(?:insert|update|delete|upsert|mutate|save)\s*\(/i
+      /\b(?:db|database|collection|repository|store)\.(?:insert|update|delete|upsert|mutate|save)\s*\(/i,
+      /\b(?:provider|gateway|apiClient|remoteClient)\.(?:request|create|update|delete|refund|charge|cancel|submit|send|publish|post|put|patch)[A-Za-z_$\d]*\s*\(/i
     ]
   },
   {
