@@ -395,6 +395,49 @@ test('MAY accepts approval gates tied to runtime operations', () => {
   assert.equal(may.semanticResolution.rule, 'approval-gate');
 });
 
+test('MAY resolves scoped approval decisions that produce authority outcomes', () => {
+  const content = [
+    "if (approval?.approved === true && approval?.scope === 'refund.create') {",
+    "  return { granted: true, mode: 'HUMAN_APPROVAL' };",
+    "}",
+    "return { granted: false, mode: 'APPROVAL_REQUIRED' };"
+  ].join('\n');
+
+  const discovery = discoverFiles([{
+    path: 'src/authority/approval-gate.js',
+    content,
+    size: Buffer.byteLength(content, 'utf8')
+  }]);
+  const may = discovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.rule, 'approval-decision-binding');
+});
+
+test('MAY resolves policy threshold decisions only when they produce authority outcomes', () => {
+  const positive = [
+    'if (proposal.amountEur <= policy.maxAutoRefundEur) {',
+    "  return { granted: true, mode: 'AUTO' };",
+    '}'
+  ].join('\n');
+  const negative = 'if (proposal.amountEur <= policy.maxAutoRefundEur) metrics.increment();';
+
+  const acceptedDiscovery = discoverFiles([{
+    path: 'src/authority/approval-gate.js',
+    content: positive,
+    size: Buffer.byteLength(positive, 'utf8')
+  }]);
+  const rejectedDiscovery = discoverFiles([{
+    path: 'src/authority/metrics.js',
+    content: negative,
+    size: Buffer.byteLength(negative, 'utf8')
+  }]);
+
+  const may = acceptedDiscovery.observations.find((item) => item.candidateClass === 'MAY');
+  assert.ok(may);
+  assert.equal(may.semanticResolution.rule, 'policy-decision-binding');
+  assert.equal(rejectedDiscovery.observations.some((item) => item.candidateClass === 'MAY'), false);
+});
+
 test('MAY accepts authority grant lifecycle surfaces', () => {
   const content = 'const valid = validateGrant(grantToken);';
   const discovery = discoverFiles([{
