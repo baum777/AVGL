@@ -79,6 +79,50 @@ function detectImports(path, content, sourceKind) {
   return facts;
 }
 
+function detectImportBindings(path, content, sourceKind) {
+  const facts = [];
+
+  for (const match of content.matchAll(/\bimport\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/g)) {
+    const index = match.index ?? 0;
+    for (const raw of match[1].split(',')) {
+      const spec = raw.trim();
+      if (!spec) continue;
+      const parts = spec.split(/\s+as\s+/i).map((part) => part.trim()).filter(Boolean);
+      const importedName = parts[0];
+      const localName = parts[1] ?? importedName;
+      if (!importedName || !localName) continue;
+      facts.push({
+        id: factId('import-binding', path, index, localName),
+        factType: 'IMPORT_BINDING',
+        path,
+        sourceKind,
+        target: match[2],
+        importedName,
+        localName,
+        bindingKind: 'NAMED',
+        evidence: evidence(path, content, index, sourceKind)
+      });
+    }
+  }
+
+  for (const match of content.matchAll(/\bimport\s+([A-Za-z_$][\w$]*)\s+from\s*['"]([^'"]+)['"]/g)) {
+    const index = match.index ?? 0;
+    facts.push({
+      id: factId('import-binding', path, index, match[1]),
+      factType: 'IMPORT_BINDING',
+      path,
+      sourceKind,
+      target: match[2],
+      importedName: 'default',
+      localName: match[1],
+      bindingKind: 'DEFAULT',
+      evidence: evidence(path, content, index, sourceKind)
+    });
+  }
+
+  return facts;
+}
+
 function detectExports(path, content, sourceKind) {
   const facts = [];
   for (const match of content.matchAll(/\bexport\s*\{([^}]+)\}/g)) {
@@ -87,6 +131,24 @@ function detectExports(path, content, sourceKind) {
       const name = raw.trim().split(/\s+as\s+/i).pop()?.trim();
       if (!name) continue;
       facts.push({ id:factId('export',path,index,name), factType:'EXPORT', path, sourceKind, name, evidence:evidence(path,content,index,sourceKind) });
+    }
+  }
+  const declarationPatterns = [
+    /\bexport\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g,
+    /\bexport\s+class\s+([A-Za-z_$][\w$]*)/g,
+    /\bexport\s+const\s+([A-Za-z_$][\w$]*)/g
+  ];
+  for (const re of declarationPatterns) {
+    for (const match of content.matchAll(re)) {
+      const index = match.index ?? 0;
+      facts.push({
+        id: factId('export', path, index, match[1]),
+        factType: 'EXPORT',
+        path,
+        sourceKind,
+        name: match[1],
+        evidence: evidence(path, content, index, sourceKind)
+      });
     }
   }
   return facts;
@@ -142,6 +204,7 @@ export function extractRelationFacts(file) {
   const facts = [
     ...detectSymbols(path,content,sourceKind),
     ...detectImports(path,content,sourceKind),
+    ...detectImportBindings(path,content,sourceKind),
     ...detectExports(path,content,sourceKind),
     ...detectCalls(path,content,sourceKind),
     ...detectPathReferences(path,content,sourceKind)
@@ -176,10 +239,15 @@ function resolvePathReference(fromPath,target,allPaths) {
 }
 
 function relation(type,from,to,basis,confidence,evidenceValue,metadata={}) {
+  const evidenceList = Array.isArray(evidenceValue)
+    ? evidenceValue.filter(Boolean)
+    : evidenceValue
+      ? [evidenceValue]
+      : [];
   return {
-    id:'rel:' + type + ':' + from.kind + ':' + from.id + '->' + to.kind + ':' + to.id + ':' + (evidenceValue?.line ?? 0),
+    id:'rel:' + type + ':' + from.kind + ':' + from.id + '->' + to.kind + ':' + to.id + ':' + (evidenceList[0]?.line ?? 0),
     type, from, to, basis, confidence,
-    evidence:evidenceValue ? [evidenceValue] : [],
+    evidence:evidenceList,
     ...metadata
   };
 }
@@ -188,6 +256,18 @@ export function resolveRelations(fileFacts,inventoryPaths=[]) {
   const allPaths = new Set(inventoryPaths.map(cleanPath));
   const relations = [];
   const effects = [];
+  const exportsByFile = new Map();
+  const symbolsByFile = new Map();
+
+  for (const bundle of fileFacts) {
+    const exported = new Map();
+    for (const exp of bundle.facts.filter((fact)=>fact.factType==='EXPORT')) exported.set(exp.name, exp);
+    exportsByFile.set(bundle.path, exported);
+
+    const symbols = new Map();
+    for (const symbol of bundle.facts.filter((fact)=>fact.factType==='SYMBOL')) symbols.set(symbol.name, symbol);
+    symbolsByFile.set(bundle.path, symbols);
+  }
 
   for (const bundle of fileFacts) {
     for (const symbol of bundle.facts.filter((fact)=>fact.factType==='SYMBOL')) {
@@ -204,6 +284,29 @@ export function resolveRelations(fileFacts,inventoryPaths=[]) {
       relations.push(relation(resolved?'IMPORTS':'IMPORTS_MODULE',{kind:'file',id:bundle.path},{kind:resolved?'file':'module',id:resolved??imp.target},'EXPLICIT',resolved?0.99:0.95,imp.evidence,{rawTarget:imp.target}));
     }
 
+    const importBindings = bundle.facts.filter((fact)=>fact.factType==='IMPORT_BINDING');
+    for (const binding of importBindings) {
+      const resolved = resolveRelativeImport(bundle.path,binding.target,allPaths);
+      if (!resolved || binding.importedName === 'default') continue;
+      const exported = exportsByFile.get(resolved)?.get(binding.importedName);
+      const symbol = symbolsByFile.get(resolved)?.get(binding.importedName);
+      if (!exported || !symbol) continue;
+      relations.push(relation(
+        'IMPORTS_SYMBOL',
+        {kind:'file',id:bundle.path},
+        {kind:'symbol',id:resolved + '#' + binding.importedName},
+        'DERIVED',
+        0.99,
+        [binding.evidence, exported.evidence],
+        {
+          rawTarget:binding.target,
+          importedName:binding.importedName,
+          localName:binding.localName,
+          resolution:'IMPORT_EXPORT_BINDING'
+        }
+      ));
+    }
+
     for (const ref of bundle.facts.filter((fact)=>fact.factType==='PATH_REFERENCE')) {
       const resolved = resolvePathReference(bundle.path,ref.target,allPaths);
       if (resolved) relations.push(relation('REFERENCES',{kind:'file',id:bundle.path},{kind:'file',id:resolved},'EXPLICIT',0.98,ref.evidence,{rawTarget:ref.target}));
@@ -211,6 +314,32 @@ export function resolveRelations(fileFacts,inventoryPaths=[]) {
 
     for (const call of bundle.facts.filter((fact)=>fact.factType==='CALL')) {
       relations.push(relation('CALLS',{kind:'file',id:bundle.path},{kind:'callable',id:call.callee},'EXPLICIT',0.9,call.evidence));
+
+      if (call.callee.includes('.')) continue;
+      const binding = importBindings.find((candidate)=>candidate.localName===call.callee);
+      if (!binding || binding.importedName === 'default') continue;
+      const resolved = resolveRelativeImport(bundle.path,binding.target,allPaths);
+      if (!resolved) continue;
+      const exported = exportsByFile.get(resolved)?.get(binding.importedName);
+      const symbol = symbolsByFile.get(resolved)?.get(binding.importedName);
+      if (!exported || !symbol) continue;
+
+      relations.push(relation(
+        'CALLS_SYMBOL',
+        {kind:'file',id:bundle.path},
+        {kind:'symbol',id:resolved + '#' + binding.importedName},
+        'DERIVED',
+        0.99,
+        [call.evidence, binding.evidence, exported.evidence],
+        {
+          callee:call.callee,
+          importedName:binding.importedName,
+          localName:binding.localName,
+          sourceModule:binding.target,
+          resolvedFile:resolved,
+          resolution:'IMPORT_EXPORT_CALL_BINDING'
+        }
+      ));
     }
 
     for (const effect of bundle.effects) {
