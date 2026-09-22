@@ -1,6 +1,6 @@
 # Contributing to AVGL
 
-Thank you for considering a contribution to **AVGL — Agent Visual Grammar Language**.
+ **AVGL — Agent Visual Grammar Language**.
 
 AVGL is not intended to become another graph-heavy repository explorer, LLM-generated wiki, or opaque AI architecture summarizer. The project is building a machine-readable visual grammar for making complex agentic systems **visible, understandable, and navigable while preserving evidence, uncertainty, scope, and effect**.
 
