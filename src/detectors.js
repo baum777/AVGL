@@ -79,7 +79,8 @@ export const DETECTORS = Object.freeze([
     evidenceState: 'INFERRED',
     patterns: [
       /\b(evidence|receipt|audit|verify|verification|reconcile|reconciliation|outcome|checksum|hash|confirm|confirmation|attestation)\b/i,
-      /\b(?:verifyReceipt|verifyDeployment|verifyArtifact|validateHash|checkChecksum|assertDatabaseState|checkState|compareCommittedState|compareState|recordEvidence|confirmTransaction|verifyWebhookSignature|validateConsistency)\s*\(/i
+      /\b(?:verifyReceipt|verifyDeployment|verifyArtifact|validateHash|checkChecksum|assertDatabaseState|checkState|compareCommittedState|compareState|recordEvidence|confirmTransaction|verifyWebhookSignature|validateConsistency)\s*\(/i,
+      /\b[A-Za-z_$][\w$]*\.status\s*(?:===|!==|==|!=)\s*['"`][A-Za-z0-9_.:-]+['"`]/i
     ]
   }
 ]);
