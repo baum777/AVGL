@@ -78,7 +78,7 @@ test('fetchRepositoryFile rejects non-file payloads with 422', async () => {
   );
 });
 
-test('summarizeRepositoryFile produces grounded bilingual code description', () => {
+test('summarizeRepositoryFile keeps file description structural and defers semantics to canonical IR', () => {
   const file = summarizeRepositoryFile({
     path: 'runtime/permissions/permission-engine.mjs',
     sourceKind: 'implementation',
@@ -88,8 +88,9 @@ test('summarizeRepositoryFile produces grounded bilingual code description', () 
   assert.equal(file.role.en, 'Runtime permission enforcement');
   assert.equal(file.role.de, 'Runtime-Berechtigungsdurchsetzung');
   assert.ok(file.symbols.includes('createPermissionEngine'));
-  assert.ok(file.semanticClasses.includes('MAY'));
-  assert.match(file.summary.de, /Authority|Permission/);
+  assert.deepEqual(file.semanticClasses, []);
+  assert.equal(file.semanticSource, 'canonical-ir');
+  assert.doesNotMatch(file.summary.en, /controls authority|effect paths|verification/i);
 });
 
 test('rankRelevantFiles prioritizes active file, question path matches, and evidence paths', () => {
