@@ -596,7 +596,10 @@ const MAY_SCOPE_PATTERNS = Object.freeze([
 
 const MAY_APPROVAL_DECISION_PATTERN = /\bapproval\?\.approved\s*===?\s*true\b/i;
 const MAY_APPROVAL_SCOPE_PATTERN = /\bapproval\?\.scope\s*===?\s*['"`][^'"`]+['"`]/i;
-const MAY_POLICY_COMPARISON_PATTERN = /\bif\s*\([^)]*\bpolicy\.[A-Za-z_$][\w$]*\s*(?:<=|>=|<|>|===?|!==?)\s*[^)]*\)/i;
+const MAY_POLICY_COMPARISON_PATTERNS = Object.freeze([
+  /\bif\s*\([^)]*\bpolicy\.[A-Za-z_$][\w$]*\s*(?:<=|>=|<|>|===?|!==?)\s*[^)]*\)/i,
+  /\bif\s*\([^)]*(?:<=|>=|<|>|===?|!==?)\s*\bpolicy\.[A-Za-z_$][\w$]*[^)]*\)/i
+]);
 const MAY_GRANTED_RESULT_PATTERN = /\bgranted\s*:\s*(?:true|false)\b/i;
 
 const MAY_REVOCATION_PATTERNS = Object.freeze([
@@ -732,7 +735,7 @@ function resolveMayAuthority({ path, line, lines, lineIndex, sourceKind }) {
   }
 
   if (
-    MAY_POLICY_COMPARISON_PATTERN.test(current) &&
+    MAY_POLICY_COMPARISON_PATTERNS.some((pattern) => pattern.test(current)) &&
     MAY_GRANTED_RESULT_PATTERN.test(decisionWindow) &&
     (MAY_AUTHORITY_PATH_PATTERN.test(pathText) || MAY_AUTHORITY_SUPPORT_PATTERN.test(decisionWindow))
   ) {
