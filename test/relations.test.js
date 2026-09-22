@@ -67,3 +67,49 @@ test('class inheritance is explicit and typed as code inheritance', () => {
   assert.equal(edge?.inheritanceKind, 'CODE_INHERITANCE');
   assert.equal(edge?.to.id, 'Parent');
 });
+
+
+test('named import calls resolve to exported symbols with provenance', () => {
+  const files = [
+    {
+      path:'src/agent/support-agent.js',
+      sourceKind:'implementation',
+      content:'import { planRefund } from "./refund-planner.js";\nexport function run(input){ return planRefund(input); }\n'
+    },
+    {
+      path:'src/agent/refund-planner.js',
+      sourceKind:'implementation',
+      content:'export function planRefund(input){ return input; }\n'
+    }
+  ];
+
+  const model = buildRelationModel(files);
+  const imported = model.relations.find((relation) => relation.type === 'IMPORTS_SYMBOL');
+  const called = model.relations.find((relation) => relation.type === 'CALLS_SYMBOL');
+
+  assert.equal(imported?.from.id, 'src/agent/support-agent.js');
+  assert.equal(imported?.to.id, 'src/agent/refund-planner.js#planRefund');
+  assert.equal(imported?.basis, 'DERIVED');
+
+  assert.equal(called?.from.id, 'src/agent/support-agent.js');
+  assert.equal(called?.to.id, 'src/agent/refund-planner.js#planRefund');
+  assert.equal(called?.resolution, 'IMPORT_EXPORT_CALL_BINDING');
+  assert.equal(called?.evidence.length, 3);
+  assert.deepEqual(
+    called?.evidence.map((item) => item.path),
+    ['src/agent/support-agent.js', 'src/agent/support-agent.js', 'src/agent/refund-planner.js']
+  );
+});
+
+test('local calls are not upgraded to CALLS_SYMBOL without a matching import/export binding', () => {
+  const files = [
+    {
+      path:'src/a.js',
+      sourceKind:'implementation',
+      content:'function planRefund(input){ return input; }\nexport function run(input){ return planRefund(input); }\n'
+    }
+  ];
+
+  const model = buildRelationModel(files);
+  assert.equal(model.relations.some((relation) => relation.type === 'CALLS_SYMBOL'), false);
+});
